@@ -1,13 +1,14 @@
-import { LivePostHogClient } from "./live.js";
-import { MockPostHogClient } from "./mock.js";
+import { LivePostHogClient } from "./live/index.js";
+import { MockPostHogClient } from "./mock/index.js";
 import type { PostHogClient, PostHogMode } from "./types.js";
 
 export type ClientOptions = {
-  /** Force mode. Default: live if POSTHOG_API_KEY is set and POSTHOG_MODE!=mock, else mock. */
+  /** Force mode. Default: mock unless POSTHOG_MODE=live. */
   mode?: PostHogMode;
   apiKey?: string;
   host?: string;
   personalApiKey?: string;
+  projectId?: string;
 };
 
 /**
@@ -22,6 +23,7 @@ export function createPostHogClient(options: ClientOptions = {}): PostHogClient 
     options.host ?? process.env.POSTHOG_HOST ?? "https://us.i.posthog.com";
   const personalApiKey =
     options.personalApiKey ?? process.env.POSTHOG_PERSONAL_API_KEY;
+  const projectId = options.projectId ?? process.env.POSTHOG_PROJECT_ID;
 
   let mode: PostHogMode;
   if (options.mode) {
@@ -29,18 +31,17 @@ export function createPostHogClient(options: ClientOptions = {}): PostHogClient 
   } else if (envMode === "live" || envMode === "mock") {
     mode = envMode;
   } else {
-    // Credentials alone do not flip to live — agents must opt in.
     mode = "mock";
   }
 
   if (mode === "live") {
-    return new LivePostHogClient({ apiKey, host, personalApiKey });
+    return new LivePostHogClient({ apiKey, host, personalApiKey, projectId });
   }
 
   return new MockPostHogClient();
 }
 
-export { MockPostHogClient } from "./mock.js";
-export { LivePostHogClient } from "./live.js";
-export { PostHogValidationError } from "./mock.js";
+export { MockPostHogClient } from "./mock/index.js";
+export { LivePostHogClient } from "./live/index.js";
+export { PostHogValidationError } from "./errors.js";
 export type * from "./types.js";
