@@ -12,7 +12,7 @@ loadEnv();
 async function main() {
   const client = createPostHogClient();
   console.error(
-    `[posthog-mcp] starting in ${client.mode} mode (set POSTHOG_MODE=live + POSTHOG_API_KEY for real API, or use .env)`,
+    `[posthog-mcp] starting in ${client.mode} mode (set POSTHOG_MODE=live + POSTHOG_API_KEY; private tools also need POSTHOG_PERSONAL_API_KEY + POSTHOG_PROJECT_ID)`,
   );
   const server = createPostHogMcpServer(client);
   const transport = new StdioServerTransport();
