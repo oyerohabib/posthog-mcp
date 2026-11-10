@@ -1,13 +1,15 @@
 /**
- * Minimal eval harness for posthog-mcp.
- * Speaks real MCP over InMemoryTransport — happy paths + failure cases.
+ * Deterministic MCP eval harness for posthog-mcp.
+ * Speaks real MCP over InMemoryTransport — contract + behaviour cases.
  *
- * Run: npm run eval
+ * Run: npm run eval | npm test
  */
 import { Client } from "@modelcontextprotocol/client";
 import { InMemoryTransport } from "@modelcontextprotocol/server";
 import { createPostHogMcpServer } from "../src/server.js";
 import { MockPostHogClient } from "../src/posthog/mock.js";
+import { EXPECTED_TOOL_NAMES } from "../src/tools/register.js";
+import tasks from "./dataset/tasks.json" with { type: "json" };
 
 type CaseResult = { name: string; ok: boolean; detail?: string };
 
@@ -70,21 +72,43 @@ async function main() {
   const results: CaseResult[] = [];
 
   results.push(
-    await runCase("lists exactly four tools", async () => {
+    await runCase(`lists exactly ${EXPECTED_TOOL_NAMES.length} tools`, async () => {
       await withClient(async (client) => {
         const listed = await client.listTools();
         const names = listed.tools.map((t) => t.name).sort();
         assert(
-          JSON.stringify(names) ===
-            JSON.stringify([
-              "capture_event",
-              "get_feature_flag",
-              "identify_user",
-              "list_feature_flags",
-            ]),
+          JSON.stringify(names) === JSON.stringify([...EXPECTED_TOOL_NAMES]),
           `unexpected tools: ${names.join(", ")}`,
         );
       });
+    }),
+  );
+
+  results.push(
+    await runCase("write tools require confirm in schema", async () => {
+      await withClient(async (client) => {
+        const listed = await client.listTools();
+        for (const name of ["create_feature_flag", "update_feature_flag"]) {
+          const tool = listed.tools.find((t) => t.name === name);
+          assert(tool, `missing ${name}`);
+          const schema = JSON.stringify(tool.inputSchema ?? {});
+          assert(
+            schema.includes("confirm"),
+            `${name} schema must include confirm`,
+          );
+        }
+      });
+    }),
+  );
+
+  results.push(
+    await runCase("dataset has 80 tasks with required fields", async () => {
+      assert(Array.isArray(tasks) && tasks.length === 80, `expected 80 tasks, got ${tasks.length}`);
+      for (const t of tasks) {
+        assert(t.id && t.category && t.prompt, `invalid task ${JSON.stringify(t)}`);
+        assert(Array.isArray(t.expectedTools), `expectedTools missing on ${t.id}`);
+        assert(t.validation, `validation missing on ${t.id}`);
+      }
     }),
   );
 
@@ -104,7 +128,10 @@ async function main() {
         assert(data.ok === true, "ok !== true");
         assert(data.mode === "mock", "expected mock mode");
         assert(data.event === "agent_ran_eval", "event mismatch");
-        assert(mock.events.length === 1, "event not stored in mock");
+        assert(
+          mock.store.events.some((e) => e.event === "agent_ran_eval"),
+          "event not stored in mock",
+        );
       });
     }),
   );
@@ -181,6 +208,112 @@ async function main() {
   );
 
   results.push(
+    await runCase("get_person seeded alice", async () => {
+      await withClient(async (client) => {
+        const { data, isError } = parseToolJson(
+          await client.callTool({
+            name: "get_person",
+            arguments: { distinctId: "user_alice" },
+          }),
+        );
+        assert(!isError && data.ok === true, "get_person failed");
+        const person = data.person as { properties?: { email?: string } };
+        assert(person?.properties?.email === "alice@example.com", "alice email mismatch");
+      });
+    }),
+  );
+
+  results.push(
+    await runCase("query_trends and query_funnel", async () => {
+      await withClient(async (client) => {
+        const trends = parseToolJson(
+          await client.callTool({
+            name: "query_trends",
+            arguments: { event: "user_signed_up" },
+          }),
+        );
+        assert(!trends.isError && (trends.data.total as number) >= 1, "trends failed");
+
+        const funnel = parseToolJson(
+          await client.callTool({
+            name: "query_funnel",
+            arguments: {
+              events: ["user_signed_up", "purchase_completed"],
+            },
+          }),
+        );
+        assert(!funnel.isError, "funnel failed");
+        const steps = funnel.data.steps as unknown[];
+        assert(Array.isArray(steps) && steps.length === 2, "funnel steps mismatch");
+      });
+    }),
+  );
+
+  results.push(
+    await runCase("cohorts groups project dashboards", async () => {
+      await withClient(async (client) => {
+        const cohorts = parseToolJson(
+          await client.callTool({ name: "list_cohorts", arguments: {} }),
+        );
+        assert(!cohorts.isError, "list_cohorts failed");
+
+        const groups = parseToolJson(
+          await client.callTool({
+            name: "list_groups",
+            arguments: { groupTypeIndex: 0 },
+          }),
+        );
+        assert(!groups.isError, "list_groups failed");
+
+        const project = parseToolJson(
+          await client.callTool({ name: "get_project", arguments: {} }),
+        );
+        assert(
+          !project.isError &&
+            (project.data.project as { name?: string })?.name === "Demo Project",
+          "get_project failed",
+        );
+
+        const dashboards = parseToolJson(
+          await client.callTool({ name: "list_dashboards", arguments: {} }),
+        );
+        assert(!dashboards.isError, "list_dashboards failed");
+      });
+    }),
+  );
+
+  results.push(
+    await runCase("create_feature_flag requires confirm", async () => {
+      await withClient(async (client, mock) => {
+        const denied = parseToolJson(
+          await client.callTool({
+            name: "create_feature_flag",
+            arguments: { key: "nope", confirm: false },
+          }),
+        );
+        assert(denied.data.ok !== true, "confirm=false must fail");
+
+        const ok = parseToolJson(
+          await client.callTool({
+            name: "create_feature_flag",
+            arguments: {
+              key: "harness-flag",
+              name: "Harness Flag",
+              rolloutPercentage: 10,
+              confirm: true,
+            },
+          }),
+        );
+        assert(!ok.isError && ok.data.ok === true, "create with confirm failed");
+        assert(
+          mock.store.findFlag("harness-flag"),
+          "flag not stored",
+        );
+      });
+    }),
+  );
+
+  results.push(
     await runCase("capture_event rejects empty event (validation)", async () => {
       await withClient(async (client) => {
         const { data, isError } = parseToolJson(
@@ -189,8 +322,6 @@ async function main() {
             arguments: { distinctId: "user_1", event: "   " },
           }),
         );
-        // Zod may reject before handler, or handler returns isError.
-        // Either way the call must not report ok:true.
         assert(data.ok !== true, "empty event must not succeed");
         assert(
           isError || data.error === "validation_error" || typeof data === "object",
@@ -224,6 +355,31 @@ async function main() {
         const { data, isError } = parseToolJson(raw);
         assert(data.ok !== true, "empty distinctId must not succeed");
         assert(isError || data.error === "validation_error", "expected validation failure");
+      });
+    }),
+  );
+
+  results.push(
+    await runCase("list_experiments and get_experiment", async () => {
+      await withClient(async (client) => {
+        const listed = parseToolJson(
+          await client.callTool({
+            name: "list_experiments",
+            arguments: { status: "running" },
+          }),
+        );
+        assert(!listed.isError, "list_experiments failed");
+        const got = parseToolJson(
+          await client.callTool({
+            name: "get_experiment",
+            arguments: { id: 101 },
+          }),
+        );
+        assert(
+          !got.isError &&
+            (got.data.experiment as { name?: string })?.name?.includes("Pricing"),
+          "get_experiment failed",
+        );
       });
     }),
   );
