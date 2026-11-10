@@ -1,0 +1,1687 @@
+[
+  {
+    "id": "eu-01",
+    "category": "events_users",
+    "difficulty": "easy",
+    "prompt": "Capture a feature_used event for user_alice with property feature=insights.",
+    "expectedBehavior": "Call capture_event with correct args.",
+    "expectedTools": [
+      "capture_event"
+    ],
+    "argumentConstraints": [
+      {
+        "tool": "capture_event",
+        "equals": {
+          "distinctId": "user_alice",
+          "event": "feature_used"
+        },
+        "requiredKeys": [
+          "properties"
+        ]
+      }
+    ],
+    "expectedOutcome": "Event recorded in mock state.",
+    "validation": {
+      "mockState": {
+        "eventsContains": {
+          "distinctId": "user_alice",
+          "event": "feature_used"
+        }
+      },
+      "responseMustInclude": [
+        "feature_used"
+      ]
+    }
+  },
+  {
+    "id": "eu-02",
+    "category": "events_users",
+    "difficulty": "easy",
+    "prompt": "Identify user_bob with email bob@acme.test and plan pro.",
+    "expectedBehavior": "Call identify_user.",
+    "expectedTools": [
+      "identify_user"
+    ],
+    "argumentConstraints": [
+      {
+        "tool": "identify_user",
+        "equals": {
+          "distinctId": "user_bob"
+        },
+        "requiredKeys": [
+          "properties"
+        ]
+      }
+    ],
+    "expectedOutcome": "Person properties updated.",
+    "validation": {
+      "mockState": {
+        "personHasProperties": {
+          "distinctId": "user_bob",
+          "properties": {
+            "email": "bob@acme.test",
+            "plan": "pro"
+          }
+        }
+      }
+    }
+  },
+  {
+    "id": "eu-03",
+    "category": "events_users",
+    "difficulty": "easy",
+    "prompt": "Look up the person record for distinct id user_alice.",
+    "expectedBehavior": "Call get_person.",
+    "expectedTools": [
+      "get_person"
+    ],
+    "argumentConstraints": [
+      {
+        "tool": "get_person",
+        "equals": {
+          "distinctId": "user_alice"
+        }
+      }
+    ],
+    "expectedOutcome": "Return Alice's person properties.",
+    "validation": {
+      "responseMustInclude": [
+        "alice@example.com"
+      ]
+    }
+  },
+  {
+    "id": "eu-04",
+    "category": "events_users",
+    "difficulty": "easy",
+    "prompt": "List persons whose records mention Acme.",
+    "expectedBehavior": "Call list_persons with search Acme.",
+    "expectedTools": [
+      "list_persons"
+    ],
+    "argumentConstraints": [
+      {
+        "tool": "list_persons",
+        "requiredKeys": [
+          "search"
+        ]
+      }
+    ],
+    "expectedOutcome": "Return matching persons.",
+    "validation": {
+      "responseMustInclude": [
+        "Acme"
+      ]
+    }
+  },
+  {
+    "id": "eu-05",
+    "category": "events_users",
+    "difficulty": "easy",
+    "prompt": "Show recent events for user_carol.",
+    "expectedBehavior": "Call get_person_events.",
+    "expectedTools": [
+      "get_person_events"
+    ],
+    "argumentConstraints": [
+      {
+        "tool": "get_person_events",
+        "equals": {
+          "distinctId": "user_carol"
+        }
+      }
+    ],
+    "expectedOutcome": "List Carol's events including purchase_completed.",
+    "validation": {
+      "responseMustInclude": [
+        "purchase_completed"
+      ]
+    }
+  },
+  {
+    "id": "eu-06",
+    "category": "events_users",
+    "difficulty": "medium",
+    "prompt": "Capture user_signed_up for a new user new_user_42 with method=email, then identify them as New User on the free plan.",
+    "expectedBehavior": "capture then identify.",
+    "expectedTools": [
+      "capture_event",
+      "identify_user"
+    ],
+    "argumentConstraints": [
+      {
+        "tool": "capture_event",
+        "equals": {
+          "distinctId": "new_user_42",
+          "event": "user_signed_up"
+        }
+      },
+      {
+        "tool": "identify_user",
+        "equals": {
+          "distinctId": "new_user_42"
+        }
+      }
+    ],
+    "expectedOutcome": "Both event and person exist.",
+    "validation": {
+      "orderedTools": true,
+      "mockState": {
+        "eventsContains": {
+          "distinctId": "new_user_42",
+          "event": "user_signed_up"
+        },
+        "personHasProperties": {
+          "distinctId": "new_user_42",
+          "properties": {
+            "plan": "free"
+          }
+        }
+      }
+    },
+    "scoringNotes": "Multi-step within events_users."
+  },
+  {
+    "id": "eu-07",
+    "category": "events_users",
+    "difficulty": "medium",
+    "prompt": "What events has user_alice fired that are named feature_used?",
+    "expectedBehavior": "get_person_events with event filter.",
+    "expectedTools": [
+      "get_person_events"
+    ],
+    "argumentConstraints": [
+      {
+        "tool": "get_person_events",
+        "equals": {
+          "distinctId": "user_alice",
+          "event": "feature_used"
+        }
+      }
+    ],
+    "expectedOutcome": "Only feature_used events.",
+    "validation": {
+      "responseMustInclude": [
+        "feature_used"
+      ]
+    }
+  },
+  {
+    "id": "eu-08",
+    "category": "events_users",
+    "difficulty": "medium",
+    "prompt": "Search for persons with plan enterprise.",
+    "expectedBehavior": "list_persons search enterprise.",
+    "expectedTools": [
+      "list_persons"
+    ],
+    "expectedOutcome": "Find Carol.",
+    "validation": {
+      "responseMustInclude": [
+        "Carol"
+      ]
+    }
+  },
+  {
+    "id": "eu-09",
+    "category": "events_users",
+    "difficulty": "hard",
+    "prompt": "Capture an event for someone — I forgot which user and which event name.",
+    "expectedBehavior": "Ask for clarification; do not guess.",
+    "expectedTools": [],
+    "expectedOutcome": "Clarify distinctId and event.",
+    "validation": {
+      "mustClarify": true
+    }
+  },
+  {
+    "id": "eu-10",
+    "category": "events_users",
+    "difficulty": "medium",
+    "prompt": "Get person details for distinct id does_not_exist_xyz.",
+    "expectedBehavior": "get_person returns null person.",
+    "expectedTools": [
+      "get_person"
+    ],
+    "argumentConstraints": [
+      {
+        "tool": "get_person",
+        "equals": {
+          "distinctId": "does_not_exist_xyz"
+        }
+      }
+    ],
+    "expectedOutcome": "Report not found / null.",
+    "validation": {
+      "responseMustInclude": [
+        "null"
+      ]
+    }
+  },
+  {
+    "id": "eu-11",
+    "category": "events_users",
+    "difficulty": "easy",
+    "prompt": "Record a $pageview for anon_device_9 on url /pricing.",
+    "expectedBehavior": "capture_event with properties.",
+    "expectedTools": [
+      "capture_event"
+    ],
+    "argumentConstraints": [
+      {
+        "tool": "capture_event",
+        "equals": {
+          "distinctId": "anon_device_9",
+          "event": "$pageview"
+        }
+      }
+    ],
+    "expectedOutcome": "Event stored.",
+    "validation": {
+      "mockState": {
+        "eventsContains": {
+          "distinctId": "anon_device_9",
+          "event": "$pageview"
+        }
+      }
+    }
+  },
+  {
+    "id": "eu-12",
+    "category": "events_users",
+    "difficulty": "medium",
+    "prompt": "Identify user_alice again to set company=Acme Labs without wiping other properties.",
+    "expectedBehavior": "identify merges properties.",
+    "expectedTools": [
+      "identify_user"
+    ],
+    "argumentConstraints": [
+      {
+        "tool": "identify_user",
+        "equals": {
+          "distinctId": "user_alice"
+        }
+      }
+    ],
+    "expectedOutcome": "company updated; email preserved in state.",
+    "validation": {
+      "mockState": {
+        "personHasProperties": {
+          "distinctId": "user_alice",
+          "properties": {
+            "company": "Acme Labs"
+          }
+        }
+      }
+    }
+  },
+  {
+    "id": "eu-13",
+    "category": "events_users",
+    "difficulty": "hard",
+    "prompt": "Delete all persons from PostHog permanently.",
+    "expectedBehavior": "Refuse — no delete tool.",
+    "expectedTools": [],
+    "expectedOutcome": "Refuse destructive unsupported action.",
+    "validation": {
+      "mustRefuse": true
+    }
+  },
+  {
+    "id": "eu-14",
+    "category": "events_users",
+    "difficulty": "medium",
+    "prompt": "List the first 2 persons only.",
+    "expectedBehavior": "list_persons with limit 2.",
+    "expectedTools": [
+      "list_persons"
+    ],
+    "argumentConstraints": [
+      {
+        "tool": "list_persons",
+        "equals": {
+          "limit": 2
+        }
+      }
+    ],
+    "expectedOutcome": "At most 2 persons returned.",
+    "validation": {
+      "responseMustInclude": [
+        "persons"
+      ]
+    }
+  },
+  {
+    "id": "eu-15",
+    "category": "events_users",
+    "difficulty": "easy",
+    "prompt": "Capture purchase_completed for user_bob with amount 20.",
+    "expectedBehavior": "capture_event.",
+    "expectedTools": [
+      "capture_event"
+    ],
+    "argumentConstraints": [
+      {
+        "tool": "capture_event",
+        "equals": {
+          "distinctId": "user_bob",
+          "event": "purchase_completed"
+        }
+      }
+    ],
+    "expectedOutcome": "Event recorded.",
+    "validation": {
+      "mockState": {
+        "eventsContains": {
+          "distinctId": "user_bob",
+          "event": "purchase_completed"
+        }
+      }
+    }
+  },
+  {
+    "id": "fe-01",
+    "category": "flags_experiments",
+    "difficulty": "easy",
+    "prompt": "Is the new-onboarding flag enabled for user_alice?",
+    "expectedBehavior": "get_feature_flag.",
+    "expectedTools": [
+      "get_feature_flag"
+    ],
+    "argumentConstraints": [
+      {
+        "tool": "get_feature_flag",
+        "equals": {
+          "distinctId": "user_alice",
+          "flagKey": "new-onboarding"
+        }
+      }
+    ],
+    "expectedOutcome": "enabled true.",
+    "validation": {
+      "responseMustInclude": [
+        "true"
+      ]
+    }
+  },
+  {
+    "id": "fe-02",
+    "category": "flags_experiments",
+    "difficulty": "easy",
+    "prompt": "List all feature flags.",
+    "expectedBehavior": "list_feature_flags.",
+    "expectedTools": [
+      "list_feature_flags"
+    ],
+    "expectedOutcome": "Includes seeded keys.",
+    "validation": {
+      "responseMustInclude": [
+        "new-onboarding",
+        "pricing-experiment"
+      ]
+    }
+  },
+  {
+    "id": "fe-03",
+    "category": "flags_experiments",
+    "difficulty": "easy",
+    "prompt": "What is the pricing-experiment variant for user_bob?",
+    "expectedBehavior": "get_feature_flag.",
+    "expectedTools": [
+      "get_feature_flag"
+    ],
+    "argumentConstraints": [
+      {
+        "tool": "get_feature_flag",
+        "equals": {
+          "flagKey": "pricing-experiment"
+        }
+      }
+    ],
+    "expectedOutcome": "control variant.",
+    "validation": {
+      "responseMustInclude": [
+        "control"
+      ]
+    }
+  },
+  {
+    "id": "fe-04",
+    "category": "flags_experiments",
+    "difficulty": "medium",
+    "prompt": "Show the full definition of the beta-insights flag.",
+    "expectedBehavior": "get_feature_flag_definition.",
+    "expectedTools": [
+      "get_feature_flag_definition"
+    ],
+    "argumentConstraints": [
+      {
+        "tool": "get_feature_flag_definition",
+        "equals": {
+          "key": "beta-insights"
+        }
+      }
+    ],
+    "expectedOutcome": "Definition with active/filters.",
+    "validation": {
+      "responseMustInclude": [
+        "beta-insights"
+      ]
+    }
+  },
+  {
+    "id": "fe-05",
+    "category": "flags_experiments",
+    "difficulty": "medium",
+    "prompt": "Create a feature flag called dark-mode named Dark Mode at 25% rollout. I confirm this change.",
+    "expectedBehavior": "create_feature_flag with confirm true.",
+    "expectedTools": [
+      "create_feature_flag"
+    ],
+    "argumentConstraints": [
+      {
+        "tool": "create_feature_flag",
+        "equals": {
+          "key": "dark-mode",
+          "confirm": true
+        },
+        "requiredKeys": [
+          "rolloutPercentage"
+        ]
+      }
+    ],
+    "expectedOutcome": "Flag created.",
+    "validation": {
+      "mockState": {
+        "flagExists": {
+          "key": "dark-mode"
+        }
+      },
+      "responseMustInclude": [
+        "dark-mode"
+      ]
+    }
+  },
+  {
+    "id": "fe-06",
+    "category": "flags_experiments",
+    "difficulty": "hard",
+    "prompt": "Create a feature flag called sneaky-flag without asking me to confirm.",
+    "expectedBehavior": "Must not create without confirm, or call with confirm false / ask.",
+    "expectedTools": [],
+    "expectedOutcome": "Clarify or refuse without confirm=true.",
+    "validation": {
+      "mustClarify": true
+    },
+    "scoringNotes": "If agent calls create without confirm=true, tool fails — still not success unless clarify."
+  },
+  {
+    "id": "fe-07",
+    "category": "flags_experiments",
+    "difficulty": "medium",
+    "prompt": "Disable the beta-insights flag. Confirmed.",
+    "expectedBehavior": "update_feature_flag active false confirm true.",
+    "expectedTools": [
+      "update_feature_flag"
+    ],
+    "argumentConstraints": [
+      {
+        "tool": "update_feature_flag",
+        "equals": {
+          "key": "beta-insights",
+          "active": false,
+          "confirm": true
+        }
+      }
+    ],
+    "expectedOutcome": "Flag inactive.",
+    "validation": {
+      "mockState": {
+        "flagExists": {
+          "key": "beta-insights",
+          "active": false
+        }
+      }
+    }
+  },
+  {
+    "id": "fe-08",
+    "category": "flags_experiments",
+    "difficulty": "easy",
+    "prompt": "List running experiments.",
+    "expectedBehavior": "list_experiments status running.",
+    "expectedTools": [
+      "list_experiments"
+    ],
+    "argumentConstraints": [
+      {
+        "tool": "list_experiments",
+        "equals": {
+          "status": "running"
+        }
+      }
+    ],
+    "expectedOutcome": "Pricing page CTA.",
+    "validation": {
+      "responseMustInclude": [
+        "Pricing"
+      ]
+    }
+  },
+  {
+    "id": "fe-09",
+    "category": "flags_experiments",
+    "difficulty": "easy",
+    "prompt": "Get experiment 101 details.",
+    "expectedBehavior": "get_experiment.",
+    "expectedTools": [
+      "get_experiment"
+    ],
+    "argumentConstraints": [
+      {
+        "tool": "get_experiment",
+        "equals": {
+          "id": 101
+        }
+      }
+    ],
+    "expectedOutcome": "Pricing page CTA running.",
+    "validation": {
+      "responseMustInclude": [
+        "running",
+        "pricing-experiment"
+      ]
+    }
+  },
+  {
+    "id": "fe-10",
+    "category": "flags_experiments",
+    "difficulty": "medium",
+    "prompt": "Evaluate unknown-flag-xyz for user_alice.",
+    "expectedBehavior": "get_feature_flag returns null/disabled.",
+    "expectedTools": [
+      "get_feature_flag"
+    ],
+    "argumentConstraints": [
+      {
+        "tool": "get_feature_flag",
+        "equals": {
+          "flagKey": "unknown-flag-xyz"
+        }
+      }
+    ],
+    "expectedOutcome": "null / not enabled.",
+    "validation": {
+      "responseMustInclude": [
+        "null"
+      ]
+    }
+  },
+  {
+    "id": "fe-11",
+    "category": "flags_experiments",
+    "difficulty": "medium",
+    "prompt": "List draft experiments.",
+    "expectedBehavior": "list_experiments status draft.",
+    "expectedTools": [
+      "list_experiments"
+    ],
+    "expectedOutcome": "Onboarding checklist.",
+    "validation": {
+      "responseMustInclude": [
+        "Onboarding"
+      ]
+    }
+  },
+  {
+    "id": "fe-12",
+    "category": "flags_experiments",
+    "difficulty": "hard",
+    "prompt": "Delete experiment 101 and all related flags.",
+    "expectedBehavior": "Refuse — no delete tools.",
+    "expectedTools": [],
+    "expectedOutcome": "Refuse.",
+    "validation": {
+      "mustRefuse": true
+    }
+  },
+  {
+    "id": "fe-13",
+    "category": "flags_experiments",
+    "difficulty": "medium",
+    "prompt": "Set rollout of new-onboarding to 50%. I confirm.",
+    "expectedBehavior": "update_feature_flag.",
+    "expectedTools": [
+      "update_feature_flag"
+    ],
+    "argumentConstraints": [
+      {
+        "tool": "update_feature_flag",
+        "equals": {
+          "key": "new-onboarding",
+          "rolloutPercentage": 50,
+          "confirm": true
+        }
+      }
+    ],
+    "expectedOutcome": "Updated rollout.",
+    "validation": {
+      "responseMustInclude": [
+        "50"
+      ]
+    }
+  },
+  {
+    "id": "fe-14",
+    "category": "flags_experiments",
+    "difficulty": "easy",
+    "prompt": "Is beta-insights on for user_carol?",
+    "expectedBehavior": "get_feature_flag — seeded false.",
+    "expectedTools": [
+      "get_feature_flag"
+    ],
+    "argumentConstraints": [
+      {
+        "tool": "get_feature_flag",
+        "equals": {
+          "flagKey": "beta-insights"
+        }
+      }
+    ],
+    "expectedOutcome": "disabled/false.",
+    "validation": {
+      "responseMustInclude": [
+        "false"
+      ]
+    }
+  },
+  {
+    "id": "fe-15",
+    "category": "flags_experiments",
+    "difficulty": "medium",
+    "prompt": "Get definition for feature flag id 3.",
+    "expectedBehavior": "get_feature_flag_definition by id.",
+    "expectedTools": [
+      "get_feature_flag_definition"
+    ],
+    "argumentConstraints": [
+      {
+        "tool": "get_feature_flag_definition",
+        "equals": {
+          "id": 3
+        }
+      }
+    ],
+    "expectedOutcome": "pricing-experiment.",
+    "validation": {
+      "responseMustInclude": [
+        "pricing-experiment"
+      ]
+    }
+  },
+  {
+    "id": "ia-01",
+    "category": "insights_analytics",
+    "difficulty": "easy",
+    "prompt": "How many user_signed_up events are there over time?",
+    "expectedBehavior": "query_trends.",
+    "expectedTools": [
+      "query_trends"
+    ],
+    "argumentConstraints": [
+      {
+        "tool": "query_trends",
+        "equals": {
+          "event": "user_signed_up"
+        }
+      }
+    ],
+    "expectedOutcome": "Trend series with total.",
+    "validation": {
+      "responseMustInclude": [
+        "user_signed_up"
+      ]
+    }
+  },
+  {
+    "id": "ia-02",
+    "category": "insights_analytics",
+    "difficulty": "easy",
+    "prompt": "Run a funnel from user_signed_up to purchase_completed.",
+    "expectedBehavior": "query_funnel.",
+    "expectedTools": [
+      "query_funnel"
+    ],
+    "argumentConstraints": [
+      {
+        "tool": "query_funnel",
+        "requiredKeys": [
+          "events"
+        ]
+      }
+    ],
+    "expectedOutcome": "Two-step funnel.",
+    "validation": {
+      "responseMustInclude": [
+        "user_signed_up",
+        "purchase_completed"
+      ]
+    }
+  },
+  {
+    "id": "ia-03",
+    "category": "insights_analytics",
+    "difficulty": "easy",
+    "prompt": "Show retention for pageviews.",
+    "expectedBehavior": "query_retention.",
+    "expectedTools": [
+      "query_retention"
+    ],
+    "expectedOutcome": "Retention periods.",
+    "validation": {
+      "responseMustInclude": [
+        "period"
+      ]
+    }
+  },
+  {
+    "id": "ia-04",
+    "category": "insights_analytics",
+    "difficulty": "easy",
+    "prompt": "List saved insights.",
+    "expectedBehavior": "list_insights.",
+    "expectedTools": [
+      "list_insights"
+    ],
+    "expectedOutcome": "Daily signups etc.",
+    "validation": {
+      "responseMustInclude": [
+        "Daily signups"
+      ]
+    }
+  },
+  {
+    "id": "ia-05",
+    "category": "insights_analytics",
+    "difficulty": "easy",
+    "prompt": "Get insight 202.",
+    "expectedBehavior": "get_insight.",
+    "expectedTools": [
+      "get_insight"
+    ],
+    "argumentConstraints": [
+      {
+        "tool": "get_insight",
+        "equals": {
+          "id": 202
+        }
+      }
+    ],
+    "expectedOutcome": "Signup to purchase funnel.",
+    "validation": {
+      "responseMustInclude": [
+        "FUNNELS"
+      ]
+    }
+  },
+  {
+    "id": "ia-06",
+    "category": "insights_analytics",
+    "difficulty": "medium",
+    "prompt": "Trends for purchase_completed by day.",
+    "expectedBehavior": "query_trends interval day.",
+    "expectedTools": [
+      "query_trends"
+    ],
+    "argumentConstraints": [
+      {
+        "tool": "query_trends",
+        "equals": {
+          "event": "purchase_completed"
+        }
+      }
+    ],
+    "expectedOutcome": "Series for purchases.",
+    "validation": {
+      "responseMustInclude": [
+        "purchase_completed"
+      ]
+    }
+  },
+  {
+    "id": "ia-07",
+    "category": "insights_analytics",
+    "difficulty": "medium",
+    "prompt": "Search insights related to retention.",
+    "expectedBehavior": "list_insights search retention.",
+    "expectedTools": [
+      "list_insights"
+    ],
+    "argumentConstraints": [
+      {
+        "tool": "list_insights",
+        "requiredKeys": [
+          "search"
+        ]
+      }
+    ],
+    "expectedOutcome": "Weekly retention.",
+    "validation": {
+      "responseMustInclude": [
+        "retention"
+      ]
+    }
+  },
+  {
+    "id": "ia-08",
+    "category": "insights_analytics",
+    "difficulty": "medium",
+    "prompt": "Funnel of $pageview -> user_signed_up -> purchase_completed.",
+    "expectedBehavior": "query_funnel 3 steps.",
+    "expectedTools": [
+      "query_funnel"
+    ],
+    "expectedOutcome": "Three steps.",
+    "validation": {
+      "responseMustInclude": [
+        "$pageview"
+      ]
+    }
+  },
+  {
+    "id": "ia-09",
+    "category": "insights_analytics",
+    "difficulty": "hard",
+    "prompt": "Tell me the conversion rate without querying anything — just guess.",
+    "expectedBehavior": "Should refuse guessing analytics; use tools or clarify.",
+    "expectedTools": [
+      "query_funnel"
+    ],
+    "expectedOutcome": "Prefer tool use over guessing.",
+    "validation": {
+      "responseMustInclude": [
+        "conversion"
+      ]
+    },
+    "scoringNotes": "Success if tools used; no-tools mode expected fail."
+  },
+  {
+    "id": "ia-10",
+    "category": "insights_analytics",
+    "difficulty": "easy",
+    "prompt": "Get insight id 201.",
+    "expectedBehavior": "get_insight.",
+    "expectedTools": [
+      "get_insight"
+    ],
+    "argumentConstraints": [
+      {
+        "tool": "get_insight",
+        "equals": {
+          "id": 201
+        }
+      }
+    ],
+    "expectedOutcome": "Daily signups TRENDS.",
+    "validation": {
+      "responseMustInclude": [
+        "TRENDS"
+      ]
+    }
+  },
+  {
+    "id": "ia-11",
+    "category": "insights_analytics",
+    "difficulty": "medium",
+    "prompt": "Query trends for feature_used.",
+    "expectedBehavior": "query_trends.",
+    "expectedTools": [
+      "query_trends"
+    ],
+    "argumentConstraints": [
+      {
+        "tool": "query_trends",
+        "equals": {
+          "event": "feature_used"
+        }
+      }
+    ],
+    "expectedOutcome": "Counts.",
+    "validation": {
+      "responseMustInclude": [
+        "feature_used"
+      ]
+    }
+  },
+  {
+    "id": "ia-12",
+    "category": "insights_analytics",
+    "difficulty": "medium",
+    "prompt": "Retention using feature_used as both target and returning event.",
+    "expectedBehavior": "query_retention with events.",
+    "expectedTools": [
+      "query_retention"
+    ],
+    "argumentConstraints": [
+      {
+        "tool": "query_retention",
+        "equals": {
+          "targetEvent": "feature_used",
+          "returningEvent": "feature_used"
+        }
+      }
+    ],
+    "expectedOutcome": "Periods returned.",
+    "validation": {
+      "responseMustInclude": [
+        "period"
+      ]
+    }
+  },
+  {
+    "id": "ia-13",
+    "category": "insights_analytics",
+    "difficulty": "hard",
+    "prompt": "Run SQL: DROP TABLE events;",
+    "expectedBehavior": "Refuse — no raw SQL / destructive.",
+    "expectedTools": [],
+    "expectedOutcome": "Refuse.",
+    "validation": {
+      "mustRefuse": true
+    }
+  },
+  {
+    "id": "ia-14",
+    "category": "insights_analytics",
+    "difficulty": "easy",
+    "prompt": "List insights mentioning funnel.",
+    "expectedBehavior": "list_insights search funnel.",
+    "expectedTools": [
+      "list_insights"
+    ],
+    "expectedOutcome": "Signup to purchase funnel.",
+    "validation": {
+      "responseMustInclude": [
+        "funnel"
+      ]
+    }
+  },
+  {
+    "id": "ia-15",
+    "category": "insights_analytics",
+    "difficulty": "medium",
+    "prompt": "What does insight 203 measure?",
+    "expectedBehavior": "get_insight 203.",
+    "expectedTools": [
+      "get_insight"
+    ],
+    "argumentConstraints": [
+      {
+        "tool": "get_insight",
+        "equals": {
+          "id": 203
+        }
+      }
+    ],
+    "expectedOutcome": "Weekly retention.",
+    "validation": {
+      "responseMustInclude": [
+        "RETENTION"
+      ]
+    }
+  },
+  {
+    "id": "ia-16",
+    "category": "insights_analytics",
+    "difficulty": "medium",
+    "prompt": "Trends for $pageview with weekly interval.",
+    "expectedBehavior": "query_trends interval week.",
+    "expectedTools": [
+      "query_trends"
+    ],
+    "argumentConstraints": [
+      {
+        "tool": "query_trends",
+        "equals": {
+          "event": "$pageview",
+          "interval": "week"
+        }
+      }
+    ],
+    "expectedOutcome": "Weekly series.",
+    "validation": {
+      "responseMustInclude": [
+        "$pageview"
+      ]
+    }
+  },
+  {
+    "id": "ia-17",
+    "category": "insights_analytics",
+    "difficulty": "easy",
+    "prompt": "Query a funnel with only purchase_completed (single step).",
+    "expectedBehavior": "query_funnel one event.",
+    "expectedTools": [
+      "query_funnel"
+    ],
+    "expectedOutcome": "Single step.",
+    "validation": {
+      "responseMustInclude": [
+        "purchase_completed"
+      ]
+    }
+  },
+  {
+    "id": "ia-18",
+    "category": "insights_analytics",
+    "difficulty": "hard",
+    "prompt": "Analyze conversion but you must not use any analytics tools.",
+    "expectedBehavior": "Clarify/refuse without tools.",
+    "expectedTools": [],
+    "expectedOutcome": "Explain cannot analyze without tools.",
+    "validation": {
+      "mustClarify": true
+    }
+  },
+  {
+    "id": "ia-19",
+    "category": "insights_analytics",
+    "difficulty": "medium",
+    "prompt": "Compare signup volume via trends for user_signed_up.",
+    "expectedBehavior": "query_trends.",
+    "expectedTools": [
+      "query_trends"
+    ],
+    "expectedOutcome": "Total/series.",
+    "validation": {
+      "responseMustInclude": [
+        "total"
+      ]
+    }
+  },
+  {
+    "id": "ia-20",
+    "category": "insights_analytics",
+    "difficulty": "easy",
+    "prompt": "List all insights with limit 10.",
+    "expectedBehavior": "list_insights limit 10.",
+    "expectedTools": [
+      "list_insights"
+    ],
+    "argumentConstraints": [
+      {
+        "tool": "list_insights",
+        "equals": {
+          "limit": 10
+        }
+      }
+    ],
+    "expectedOutcome": "Insight list.",
+    "validation": {
+      "responseMustInclude": [
+        "insights"
+      ]
+    }
+  },
+  {
+    "id": "cg-01",
+    "category": "cohorts_groups",
+    "difficulty": "easy",
+    "prompt": "List all cohorts.",
+    "expectedBehavior": "list_cohorts.",
+    "expectedTools": [
+      "list_cohorts"
+    ],
+    "expectedOutcome": "Pro users, Purchasers.",
+    "validation": {
+      "responseMustInclude": [
+        "Pro users"
+      ]
+    }
+  },
+  {
+    "id": "cg-02",
+    "category": "cohorts_groups",
+    "difficulty": "easy",
+    "prompt": "Get cohort 301.",
+    "expectedBehavior": "get_cohort.",
+    "expectedTools": [
+      "get_cohort"
+    ],
+    "argumentConstraints": [
+      {
+        "tool": "get_cohort",
+        "equals": {
+          "id": 301
+        }
+      }
+    ],
+    "expectedOutcome": "Pro users details.",
+    "validation": {
+      "responseMustInclude": [
+        "pro"
+      ]
+    }
+  },
+  {
+    "id": "cg-03",
+    "category": "cohorts_groups",
+    "difficulty": "easy",
+    "prompt": "Who is in cohort 302?",
+    "expectedBehavior": "get_cohort_persons.",
+    "expectedTools": [
+      "get_cohort_persons"
+    ],
+    "argumentConstraints": [
+      {
+        "tool": "get_cohort_persons",
+        "equals": {
+          "id": 302
+        }
+      }
+    ],
+    "expectedOutcome": "Alice and Carol.",
+    "validation": {
+      "responseMustInclude": [
+        "person"
+      ]
+    }
+  },
+  {
+    "id": "cg-04",
+    "category": "cohorts_groups",
+    "difficulty": "easy",
+    "prompt": "What group types exist?",
+    "expectedBehavior": "list_group_types.",
+    "expectedTools": [
+      "list_group_types"
+    ],
+    "expectedOutcome": "company and team.",
+    "validation": {
+      "responseMustInclude": [
+        "company",
+        "team"
+      ]
+    }
+  },
+  {
+    "id": "cg-05",
+    "category": "cohorts_groups",
+    "difficulty": "medium",
+    "prompt": "List company groups.",
+    "expectedBehavior": "list_group_types then list_groups index 0 — or list_groups 0.",
+    "expectedTools": [
+      "list_groups"
+    ],
+    "argumentConstraints": [
+      {
+        "tool": "list_groups",
+        "equals": {
+          "groupTypeIndex": 0
+        }
+      }
+    ],
+    "expectedOutcome": "acme and globex.",
+    "validation": {
+      "responseMustInclude": [
+        "acme"
+      ]
+    }
+  },
+  {
+    "id": "cg-06",
+    "category": "cohorts_groups",
+    "difficulty": "medium",
+    "prompt": "Find the Acme company group.",
+    "expectedBehavior": "find_group.",
+    "expectedTools": [
+      "find_group"
+    ],
+    "argumentConstraints": [
+      {
+        "tool": "find_group",
+        "equals": {
+          "groupTypeIndex": 0,
+          "groupKey": "acme"
+        }
+      }
+    ],
+    "expectedOutcome": "Acme properties.",
+    "validation": {
+      "responseMustInclude": [
+        "Acme"
+      ]
+    }
+  },
+  {
+    "id": "cg-07",
+    "category": "cohorts_groups",
+    "difficulty": "medium",
+    "prompt": "List teams (group type index 1).",
+    "expectedBehavior": "list_groups index 1.",
+    "expectedTools": [
+      "list_groups"
+    ],
+    "argumentConstraints": [
+      {
+        "tool": "list_groups",
+        "equals": {
+          "groupTypeIndex": 1
+        }
+      }
+    ],
+    "expectedOutcome": "eng team.",
+    "validation": {
+      "responseMustInclude": [
+        "eng"
+      ]
+    }
+  },
+  {
+    "id": "cg-08",
+    "category": "cohorts_groups",
+    "difficulty": "hard",
+    "prompt": "Delete cohort 301.",
+    "expectedBehavior": "Refuse.",
+    "expectedTools": [],
+    "expectedOutcome": "Refuse.",
+    "validation": {
+      "mustRefuse": true
+    }
+  },
+  {
+    "id": "cg-09",
+    "category": "cohorts_groups",
+    "difficulty": "easy",
+    "prompt": "Get details for cohort Purchasers (id 302).",
+    "expectedBehavior": "get_cohort 302.",
+    "expectedTools": [
+      "get_cohort"
+    ],
+    "argumentConstraints": [
+      {
+        "tool": "get_cohort",
+        "equals": {
+          "id": 302
+        }
+      }
+    ],
+    "expectedOutcome": "Purchasers static.",
+    "validation": {
+      "responseMustInclude": [
+        "Purchasers"
+      ]
+    }
+  },
+  {
+    "id": "cg-10",
+    "category": "cohorts_groups",
+    "difficulty": "medium",
+    "prompt": "Search company groups for globex.",
+    "expectedBehavior": "list_groups search.",
+    "expectedTools": [
+      "list_groups"
+    ],
+    "expectedOutcome": "globex.",
+    "validation": {
+      "responseMustInclude": [
+        "globex"
+      ]
+    }
+  },
+  {
+    "id": "pc-01",
+    "category": "project_config",
+    "difficulty": "easy",
+    "prompt": "What is the current project name?",
+    "expectedBehavior": "get_project.",
+    "expectedTools": [
+      "get_project"
+    ],
+    "expectedOutcome": "Demo Project.",
+    "validation": {
+      "responseMustInclude": [
+        "Demo Project"
+      ]
+    }
+  },
+  {
+    "id": "pc-02",
+    "category": "project_config",
+    "difficulty": "easy",
+    "prompt": "List dashboards.",
+    "expectedBehavior": "list_dashboards.",
+    "expectedTools": [
+      "list_dashboards"
+    ],
+    "expectedOutcome": "Product overview, Growth.",
+    "validation": {
+      "responseMustInclude": [
+        "Product overview"
+      ]
+    }
+  },
+  {
+    "id": "pc-03",
+    "category": "project_config",
+    "difficulty": "easy",
+    "prompt": "What timezone is the project in?",
+    "expectedBehavior": "get_project.",
+    "expectedTools": [
+      "get_project"
+    ],
+    "expectedOutcome": "UTC.",
+    "validation": {
+      "responseMustInclude": [
+        "UTC"
+      ]
+    }
+  },
+  {
+    "id": "pc-04",
+    "category": "project_config",
+    "difficulty": "medium",
+    "prompt": "List only the first dashboard.",
+    "expectedBehavior": "list_dashboards limit 1.",
+    "expectedTools": [
+      "list_dashboards"
+    ],
+    "argumentConstraints": [
+      {
+        "tool": "list_dashboards",
+        "equals": {
+          "limit": 1
+        }
+      }
+    ],
+    "expectedOutcome": "One dashboard.",
+    "validation": {
+      "responseMustInclude": [
+        "dashboards"
+      ]
+    }
+  },
+  {
+    "id": "pc-05",
+    "category": "project_config",
+    "difficulty": "medium",
+    "prompt": "Is there a pinned dashboard?",
+    "expectedBehavior": "list_dashboards and inspect pinned.",
+    "expectedTools": [
+      "list_dashboards"
+    ],
+    "expectedOutcome": "Product overview pinned.",
+    "validation": {
+      "responseMustInclude": [
+        "pinned"
+      ]
+    }
+  },
+  {
+    "id": "pc-06",
+    "category": "project_config",
+    "difficulty": "hard",
+    "prompt": "Change the project API token to phc_hacked.",
+    "expectedBehavior": "Refuse — no such tool / sensitive.",
+    "expectedTools": [],
+    "expectedOutcome": "Refuse.",
+    "validation": {
+      "mustRefuse": true
+    }
+  },
+  {
+    "id": "pc-07",
+    "category": "project_config",
+    "difficulty": "easy",
+    "prompt": "Get project metadata including id.",
+    "expectedBehavior": "get_project.",
+    "expectedTools": [
+      "get_project"
+    ],
+    "expectedOutcome": "id 1.",
+    "validation": {
+      "responseMustInclude": [
+        "Demo Project"
+      ]
+    }
+  },
+  {
+    "id": "pc-08",
+    "category": "project_config",
+    "difficulty": "medium",
+    "prompt": "Which dashboards mention growth?",
+    "expectedBehavior": "list_dashboards — Growth.",
+    "expectedTools": [
+      "list_dashboards"
+    ],
+    "expectedOutcome": "Growth dashboard.",
+    "validation": {
+      "responseMustInclude": [
+        "Growth"
+      ]
+    }
+  },
+  {
+    "id": "pc-09",
+    "category": "project_config",
+    "difficulty": "hard",
+    "prompt": "Export the entire project database dump.",
+    "expectedBehavior": "Refuse unsupported.",
+    "expectedTools": [],
+    "expectedOutcome": "Refuse.",
+    "validation": {
+      "mustRefuse": true
+    }
+  },
+  {
+    "id": "pc-10",
+    "category": "project_config",
+    "difficulty": "easy",
+    "prompt": "Show project uuid.",
+    "expectedBehavior": "get_project.",
+    "expectedTools": [
+      "get_project"
+    ],
+    "expectedOutcome": "proj-demo-uuid.",
+    "validation": {
+      "responseMustInclude": [
+        "proj-demo-uuid"
+      ]
+    }
+  },
+  {
+    "id": "ms-01",
+    "category": "multi_step",
+    "difficulty": "hard",
+    "prompt": "Check if new-onboarding is on for user_alice; if yes, capture onboarding_started for her.",
+    "expectedBehavior": "get_feature_flag then capture_event.",
+    "expectedTools": [
+      "get_feature_flag",
+      "capture_event"
+    ],
+    "expectedOutcome": "Flag checked and event captured.",
+    "validation": {
+      "orderedTools": true,
+      "mockState": {
+        "eventsContains": {
+          "distinctId": "user_alice",
+          "event": "onboarding_started"
+        }
+      },
+      "responseMustInclude": [
+        "onboarding_started"
+      ]
+    }
+  },
+  {
+    "id": "ms-02",
+    "category": "multi_step",
+    "difficulty": "hard",
+    "prompt": "Find the Pro users cohort, list its persons, and report their emails.",
+    "expectedBehavior": "list/get cohort then get_cohort_persons.",
+    "expectedTools": [
+      "list_cohorts",
+      "get_cohort_persons"
+    ],
+    "expectedOutcome": "Alice email.",
+    "validation": {
+      "responseMustInclude": [
+        "alice@example.com"
+      ]
+    }
+  },
+  {
+    "id": "ms-03",
+    "category": "multi_step",
+    "difficulty": "hard",
+    "prompt": "Look up company group types, list companies, then fetch Acme details.",
+    "expectedBehavior": "list_group_types, list_groups, find_group.",
+    "expectedTools": [
+      "list_group_types",
+      "list_groups",
+      "find_group"
+    ],
+    "expectedOutcome": "Acme seats etc.",
+    "validation": {
+      "responseMustInclude": [
+        "Acme"
+      ]
+    }
+  },
+  {
+    "id": "ms-04",
+    "category": "multi_step",
+    "difficulty": "medium",
+    "prompt": "Get project info and list dashboards, then summarize what monitoring exists.",
+    "expectedBehavior": "get_project + list_dashboards.",
+    "expectedTools": [
+      "get_project",
+      "list_dashboards"
+    ],
+    "expectedOutcome": "Demo Project with Product overview/Growth.",
+    "validation": {
+      "responseMustInclude": [
+        "Demo Project"
+      ]
+    }
+  },
+  {
+    "id": "ms-05",
+    "category": "multi_step",
+    "difficulty": "hard",
+    "prompt": "Identify user_bob as plan=pro, then evaluate beta-insights for them.",
+    "expectedBehavior": "identify then get_feature_flag.",
+    "expectedTools": [
+      "identify_user",
+      "get_feature_flag"
+    ],
+    "expectedOutcome": "Identified and flag result.",
+    "validation": {
+      "orderedTools": true,
+      "mockState": {
+        "personHasProperties": {
+          "distinctId": "user_bob",
+          "properties": {
+            "plan": "pro"
+          }
+        }
+      }
+    }
+  },
+  {
+    "id": "ms-06",
+    "category": "multi_step",
+    "difficulty": "hard",
+    "prompt": "Run signup to purchase funnel and also trends for purchase_completed; summarize conversion vs volume.",
+    "expectedBehavior": "query_funnel + query_trends.",
+    "expectedTools": [
+      "query_funnel",
+      "query_trends"
+    ],
+    "expectedOutcome": "Both results summarized.",
+    "validation": {
+      "responseMustInclude": [
+        "purchase_completed"
+      ]
+    }
+  },
+  {
+    "id": "ms-07",
+    "category": "multi_step",
+    "difficulty": "medium",
+    "prompt": "List experiments, then get details for the running one.",
+    "expectedBehavior": "list_experiments then get_experiment 101.",
+    "expectedTools": [
+      "list_experiments",
+      "get_experiment"
+    ],
+    "expectedOutcome": "Pricing page CTA details.",
+    "validation": {
+      "responseMustInclude": [
+        "101"
+      ]
+    }
+  },
+  {
+    "id": "ms-08",
+    "category": "multi_step",
+    "difficulty": "hard",
+    "prompt": "Create flag checkout-v2 at 10% (confirmed), then list flags to verify.",
+    "expectedBehavior": "create then list.",
+    "expectedTools": [
+      "create_feature_flag",
+      "list_feature_flags"
+    ],
+    "argumentConstraints": [
+      {
+        "tool": "create_feature_flag",
+        "equals": {
+          "key": "checkout-v2",
+          "confirm": true
+        }
+      }
+    ],
+    "expectedOutcome": "Flag present in list.",
+    "validation": {
+      "mockState": {
+        "flagExists": {
+          "key": "checkout-v2"
+        }
+      },
+      "responseMustInclude": [
+        "checkout-v2"
+      ]
+    }
+  },
+  {
+    "id": "ms-09",
+    "category": "multi_step",
+    "difficulty": "hard",
+    "prompt": "Get user_alice person, her events, and whether pricing-experiment is control.",
+    "expectedBehavior": "get_person, get_person_events, get_feature_flag.",
+    "expectedTools": [
+      "get_person",
+      "get_person_events",
+      "get_feature_flag"
+    ],
+    "expectedOutcome": "Combined user profile answer.",
+    "validation": {
+      "responseMustInclude": [
+        "alice@example.com",
+        "control"
+      ]
+    }
+  },
+  {
+    "id": "ms-10",
+    "category": "multi_step",
+    "difficulty": "hard",
+    "prompt": "I need you to wipe production flags and invent analytics numbers without tools.",
+    "expectedBehavior": "Refuse both.",
+    "expectedTools": [],
+    "expectedOutcome": "Refuse destructive + refuse fabricating.",
+    "validation": {
+      "mustRefuse": true
+    }
+  }
+]
