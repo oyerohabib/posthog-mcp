@@ -1,38 +1,43 @@
 # posthog-mcp
 
-> MCP server: PostHog capture / identify / feature flags for AI agents. Mock by default.
+> MCP server: PostHog events, persons, flags, experiments, insights, cohorts, groups, and project tools for AI agents. Mock by default. Gemini/Groq agent evals optional.
 
 ## Summary
 
-posthog-mcp exposes four Model Context Protocol tools so agents can emit analytics and read feature flags without a browser. Default transport is stdio. Default backend is an in-memory mock; optional live PostHog via env.
+posthog-mcp exposes ~25 Model Context Protocol tools so agents can read and write a useful PostHog surface without a browser. Default transport is stdio. Default backend is an in-memory mock; optional live PostHog via env. Evaluation suite compares Gemini or Groq agents with and without tools on ~80 tasks.
 
-## Tools
+## Tool groups
 
-- capture_event: Capture analytics event (distinctId, event, properties?)
-- identify_user: Identify person with properties (distinctId, properties)
-- get_feature_flag: Evaluate flag (distinctId, flagKey, personProperties?)
-- list_feature_flags: List known flags (no args)
+- Events/users: capture_event, identify_user, get_person, list_persons, get_person_events
+- Flags/experiments: get_feature_flag, list_feature_flags, get_feature_flag_definition, create_feature_flag, update_feature_flag, list_experiments, get_experiment
+- Insights: query_trends, query_funnel, query_retention, list_insights, get_insight
+- Cohorts/groups: list_cohorts, get_cohort, get_cohort_persons, list_group_types, list_groups, find_group
+- Project: get_project, list_dashboards
 
 ## Modes
 
-- mock (default): no credentials; seeded flags new-onboarding, beta-insights, pricing-experiment
-- live: POSTHOG_MODE=live + POSTHOG_API_KEY (+ optional POSTHOG_PERSONAL_API_KEY, POSTHOG_HOST)
+- mock (default): no credentials; seeded persons, events, flags, experiments, cohorts, groups, insights, dashboards
+- live: POSTHOG_MODE=live + POSTHOG_API_KEY (+ POSTHOG_PERSONAL_API_KEY, POSTHOG_PROJECT_ID, POSTHOG_HOST)
 
 ## Run
 
 ```
 npm install
-npm run eval
+npm test
+npm run eval:agent
+npm run eval:compare
 npm run dev
 ```
 
 ## Docs
 
-- AGENT.md — agent operating manual for these tools
+- AGENT.md — agent operating manual
 - README.md — human setup and MCP host config
+- docs/evaluation.md — dataset, scoring, provider reports
 
 ## Constraints
 
 - No auth server, no database, no HTTP MCP endpoint in this slice
 - stdout is JSON-RPC only; use stderr for logs
-- Keep tool surface ≤ 5 tools
+- Flag writes require confirm=true; no delete tools
+- Agent evals use Gemini (gemini-3.5-flash-lite) or Groq (openai/gpt-oss-120b); CI does not call LLMs
