@@ -1,7 +1,7 @@
 {
   "name": "posthog-mcp",
   "version": "1.0.0",
-  "description": "PostHog-flavored MCP server agents can drive — mock by default, optional live API",
+  "description": "PostHog-flavored MCP server agents can drive — mock by default, optional live API, Groq agent evals",
   "type": "module",
   "bin": {
     "posthog-mcp": "./dist/src/index.js"
@@ -12,6 +12,8 @@
     "dev": "tsx src/index.ts",
     "eval": "tsx eval/harness.ts",
     "test": "tsx eval/harness.ts",
+    "eval:agent": "tsx eval/run-agent.ts",
+    "eval:compare": "tsx eval/run-compare.ts",
     "typecheck": "tsc --noEmit"
   },
   "engines": {
@@ -21,7 +23,9 @@
     "mcp",
     "posthog",
     "agents",
-    "model-context-protocol"
+    "model-context-protocol",
+    "groq",
+    "evaluation"
   ],
   "license": "MIT",
   "dependencies": {
