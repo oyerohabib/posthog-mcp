@@ -4,7 +4,7 @@ Instructions for AI agents using this MCP server.
 
 ## Purpose
 
-Drive a minimal PostHog analytics surface over MCP. Default mode is **mock** (in-memory, no credentials). Use live mode only when env vars are explicitly set.
+Drive a PostHog analytics surface over MCP (~25 tools). Default mode is **mock** (in-memory, no credentials). Use live mode only when env vars are explicitly set.
 
 ## Connection
 
@@ -12,82 +12,83 @@ Drive a minimal PostHog analytics surface over MCP. Default mode is **mock** (in
 - Start: `npx tsx src/index.ts` (or `node dist/src/index.js` after build)
 - Env:
   - `POSTHOG_MODE` = `mock` (default) | `live`
-  - `POSTHOG_API_KEY` — project API key (`phc_…`), required for live
+  - `POSTHOG_API_KEY` — project API key (`phc_…`), required for live capture/decide
   - `POSTHOG_HOST` — default `https://us.i.posthog.com`
-  - `POSTHOG_PERSONAL_API_KEY` — optional (`phx_…`); enables live `list_feature_flags`
+  - `POSTHOG_PERSONAL_API_KEY` — personal key (`phx_…`) for private REST + query
+  - `POSTHOG_PROJECT_ID` — numeric project id for private API paths
 
 Do not write logs to stdout; the protocol owns stdout.
 
-## Tools
+## Tool categories
 
-### capture_event
+### Events & users
 
-Capture one analytics event.
+| Tool | Notes |
+|------|--------|
+| `capture_event` | `distinctId`, `event`, optional `properties` |
+| `identify_user` | `distinctId`, non-empty `properties` ($set) |
+| `get_person` | by `distinctId` → person or null |
+| `list_persons` | optional `search`, `limit`, `offset` |
+| `get_person_events` | recent events for a `distinctId` |
 
-```json
-{ "distinctId": "user_123", "event": "feature_used", "properties": { "feature": "mcp" } }
-```
+### Feature flags & experiments
 
-Rules:
-- `distinctId` and `event` are required non-empty strings.
-- `properties` is optional JSON object.
-- Success JSON: `{ "ok": true, "mode": "mock"|"live", "distinctId", "event", "captureId?" }`.
-- Failure JSON: `{ "ok": false, "error": "validation_error"|"upstream_error", "message" }` with `isError: true`.
-
-### identify_user
-
-Set person properties (`$set`).
-
-```json
-{ "distinctId": "user_123", "properties": { "email": "a@b.com", "plan": "pro" } }
-```
-
-Rules:
-- `properties` must be a non-empty object.
-- Merges with any previously identified properties in mock mode.
-
-### get_feature_flag
-
-Evaluate one flag for a user.
-
-```json
-{ "distinctId": "user_123", "flagKey": "new-onboarding" }
-```
-
-Optional override (mock / decide): `personProperties["$feature/<flagKey>"]`.
+| Tool | Notes |
+|------|--------|
+| `get_feature_flag` | evaluate for user; mock seeds below |
+| `list_feature_flags` | list definitions |
+| `get_feature_flag_definition` | by `key` or `id` |
+| `create_feature_flag` | requires `confirm: true` |
+| `update_feature_flag` | requires `confirm: true` |
+| `list_experiments` | optional `status` |
+| `get_experiment` | by numeric `id` |
 
 Mock seeded flags:
+
 | key | value |
 |-----|-------|
 | `new-onboarding` | `true` |
 | `beta-insights` | `false` |
 | `pricing-experiment` | `"control"` |
 
-Success includes `value` (`boolean|string|null`) and `enabled` (boolean). Unknown keys → `value: null`, `enabled: false`.
+### Insights
 
-### list_feature_flags
+`query_trends`, `query_funnel`, `query_retention`, `list_insights`, `get_insight`
 
-No arguments. Mock returns seeded flags. Live returns `[]` unless `POSTHOG_PERSONAL_API_KEY` is set.
+### Cohorts & groups
 
-## Preferred call order
+`list_cohorts`, `get_cohort`, `get_cohort_persons`, `list_group_types`, `list_groups` (needs `groupTypeIndex`), `find_group`
 
-1. `list_feature_flags` — discover keys
-2. `get_feature_flag` — gate behavior
-3. `identify_user` — attach person context when known
-4. `capture_event` — emit telemetry for actions taken
+### Project
+
+`get_project`, `list_dashboards`
+
+## Safety
+
+- Never invent PostHog data when tools are available — call tools.
+- Flag create/update: only with explicit user confirmation and `confirm: true`.
+- There are **no delete tools**. Refuse permanent deletes / destructive SQL / token changes.
+- If `distinctId`, flag key, or other required fields are missing, ask for clarification.
+
+## Preferred discovery order
+
+1. `get_project` / `list_feature_flags` / `list_group_types` — orient
+2. Read tools (`get_*`, `list_*`, `query_*`)
+3. `identify_user` / `capture_event` when recording state
+4. Flag writes only when confirmed
 
 ## Error handling
 
-- Treat `isError: true` or `ok: false` as failure; read `message`.
+- Treat `isError: true` or `ok: false` as failure; read `message` and `error`.
 - Do not retry validation errors with the same arguments.
-- Live upstream errors may be transient; one retry is reasonable.
+- Live upstream / rate-limit errors may get one retry with backoff.
 
 ## Eval
 
-Agents verifying this server should run:
-
 ```bash
-npm run eval
+npm test                 # deterministic, CI-safe
+npm run eval:agent -- --provider gemini   # Gemini or Groq + tools
+npm run eval:compare -- --provider gemini # with vs without tools
 ```
 
-Harness covers tool listing, happy paths, and validation failures over real MCP (in-memory transport).
+See `docs/evaluation.md`.
