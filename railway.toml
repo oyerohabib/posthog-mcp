@@ -1,6 +1,7 @@
 [build]
 builder = "nixpacks"
-buildCommand = "npm ci && npm run build"
+# Nixpacks already runs npm ci during install; only compile here.
+buildCommand = "npm run build"
 
 [deploy]
 startCommand = "npm run start:http"

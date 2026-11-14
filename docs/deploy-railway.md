@@ -30,11 +30,15 @@ PostHog keys arrive as request headers. LLM keys are only for local evals.
 
 ## Build & start
 
-Railway uses [`railway.toml`](../railway.toml):
+Railway uses [`railway.toml`](../railway.toml). Nixpacks runs `npm ci` in the install phase; the build command is only:
 
 ```bash
-npm ci
 npm run build
+```
+
+Start command:
+
+```bash
 npm run start:http
 ```
 
