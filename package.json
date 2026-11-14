@@ -9,9 +9,11 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/src/index.js",
+    "start:http": "node dist/src/http.js",
     "dev": "tsx src/index.ts",
+    "dev:http": "tsx src/http.ts",
     "eval": "tsx eval/harness.ts",
-    "test": "tsx eval/harness.ts",
+    "test": "tsx eval/harness.ts && tsx eval/http-harness.ts",
     "eval:agent": "tsx eval/run-agent.ts",
     "eval:compare": "tsx eval/run-compare.ts",
     "typecheck": "tsc --noEmit"
