@@ -31,10 +31,22 @@ Mock seeded flags: `new-onboarding=true`, `beta-insights=false`, `pricing-experi
 
 ```bash
 npm install
-npm test              # deterministic MCP + dataset contract tests (no Groq key)
-npm run eval          # same as npm test
+npm test              # deterministic MCP + HTTP auth/transport tests (no LLM keys)
+npm run eval          # STDIO contract tests only
 npm run dev           # stdio MCP server
+npm run dev:http      # remote Streamable HTTP MCP (needs MCP_API_KEY)
 ```
+
+### Local STDIO vs remote HTTP
+
+| Mode | Entry | Auth | PostHog credentials |
+|------|--------|------|---------------------|
+| **STDIO** (local) | `npm run dev` | Process env | `.env` / `POSTHOG_MODE` |
+| **HTTP** (remote) | `npm run dev:http` / Railway | `Authorization: Bearer <MCP_API_KEY>` | Per-request headers (live required) |
+
+Bearer API-key auth is **not** a full OAuth 2.1 flow. The authenticator is structured so OAuth can be added later without rewriting tools.
+
+See [docs/deploy-railway.md](./docs/deploy-railway.md) for hosting.
 
 ### Agent evaluations (Gemini or Groq)
 
@@ -67,6 +79,10 @@ POSTHOG_HOST=https://us.i.posthog.com
 POSTHOG_PERSONAL_API_KEY=phx_xxx
 POSTHOG_PROJECT_ID=12345
 
+# Remote HTTP (Railway / npm run dev:http)
+MCP_API_KEY=your_long_random_secret
+PORT=8787
+
 EVAL_PROVIDER=gemini
 GEMINI_API_KEY=...
 GEMINI_MODEL=gemini-3.5-flash-lite
@@ -77,18 +93,22 @@ GROQ_MODEL=openai/gpt-oss-120b
 
 | Variable | Default | Notes |
 |----------|---------|-------|
-| `POSTHOG_MODE` | `mock` | `live` enables real network calls |
-| `POSTHOG_API_KEY` | — | Project API key (`phc_...`) for capture/decide |
+| `POSTHOG_MODE` | `mock` | STDIO only — `live` enables real network calls |
+| `POSTHOG_API_KEY` | — | STDIO project API key (`phc_...`) |
 | `POSTHOG_HOST` | `https://us.i.posthog.com` | Use `https://eu.i.posthog.com` for EU |
-| `POSTHOG_PERSONAL_API_KEY` | — | Personal key (`phx_...`) for private REST/query |
-| `POSTHOG_PROJECT_ID` | — | Required for live private API tools |
+| `POSTHOG_PERSONAL_API_KEY` | — | STDIO personal key (`phx_...`) |
+| `POSTHOG_PROJECT_ID` | — | STDIO project id |
+| `MCP_API_KEY` | — | **Required in production HTTP** — bearer secret |
+| `PORT` | `8787` | HTTP listen port (Railway sets this) |
+| `MCP_ALLOWED_ORIGINS` | empty | Comma-separated browser Origins (optional) |
+| `POSTHOG_ALLOWED_HOSTS` | cloud defaults | Extra allowed PostHog hostnames |
 | `EVAL_PROVIDER` | auto | `gemini` or `groq` |
 | `GEMINI_API_KEY` | — | Google AI Studio key for agent evals |
-| `GEMINI_MODEL` | `gemini-3.5-flash-lite` | Gemini model id (`gemini-3.8-flash` for stronger Flash) |
+| `GEMINI_MODEL` | `gemini-3.5-flash-lite` | Gemini model id |
 | `GROQ_API_KEY` | — | Groq key for agent evals |
 | `GROQ_MODEL` | `openai/gpt-oss-120b` | Groq model id |
 
-`.env` is git-ignored — never commit real keys.
+`.env` is git-ignored — never commit real keys. Do **not** put PostHog/Gemini/Groq keys in Railway for the HTTP service; PostHog credentials are sent per request.
 
 ### MCP Inspector
 
@@ -96,7 +116,7 @@ GROQ_MODEL=openai/gpt-oss-120b
 npx @modelcontextprotocol/inspector -- npx tsx src/index.ts
 ```
 
-### Cursor / Claude Desktop MCP config
+### Cursor / Claude Desktop — local STDIO
 
 ```json
 {
@@ -113,26 +133,67 @@ npx @modelcontextprotocol/inspector -- npx tsx src/index.ts
 }
 ```
 
+### Cursor — remote HTTP (Railway)
+
+After deploying (see [docs/deploy-railway.md](./docs/deploy-railway.md)), point Cursor at your public URL. Prefer env interpolation so secrets stay out of the config file:
+
+```json
+{
+  "mcpServers": {
+    "posthog": {
+      "url": "https://YOUR-RAILWAY-DOMAIN/mcp",
+      "headers": {
+        "Authorization": "Bearer ${env:POSTHOG_MCP_API_KEY}",
+        "X-PostHog-API-Key": "${env:POSTHOG_PROJECT_API_KEY}",
+        "X-PostHog-Personal-API-Key": "${env:POSTHOG_PERSONAL_API_KEY}",
+        "X-PostHog-Project-ID": "${env:POSTHOG_PROJECT_ID}",
+        "X-PostHog-Host": "https://us.i.posthog.com"
+      }
+    }
+  }
+}
+```
+
+For EU cloud, set `X-PostHog-Host` to `https://eu.i.posthog.com`.
+
+Define `POSTHOG_MCP_API_KEY` (same value as Railway `MCP_API_KEY`) and your PostHog keys in the environment Cursor can read (shell profile, Cursor secrets, or OS env).
+
+| Header | Required | Purpose |
+|--------|----------|---------|
+| `Authorization: Bearer …` | yes | Service auth (`MCP_API_KEY`) |
+| `X-PostHog-API-Key` | yes | Project key (`phc_…`) |
+| `X-PostHog-Personal-API-Key` | yes | Personal key (`phx_…`) |
+| `X-PostHog-Project-ID` | yes | Numeric project id |
+| `X-PostHog-Host` | no | Defaults to US cloud |
+
+Endpoints: `GET /health`, Streamable HTTP MCP on `/mcp`.
+
 ## Scripts
 
 | Script | What it does |
 |--------|----------------|
 | `npm run dev` | Start stdio MCP server via tsx |
+| `npm run dev:http` | Start Streamable HTTP MCP server |
 | `npm run build` | Compile TypeScript to `dist/` |
-| `npm start` | Run compiled `dist/src/index.js` |
-| `npm test` / `npm run eval` | Deterministic MCP + dataset gates (CI-safe) |
+| `npm start` | Run compiled STDIO server |
+| `npm run start:http` | Run compiled HTTP server (Railway) |
+| `npm test` | STDIO harness + HTTP auth/transport tests |
+| `npm run eval` | STDIO contract tests only |
 | `npm run eval:agent` | Agent eval via Gemini or Groq |
 | `npm run eval:compare` | With-tools vs no-tools comparison |
 | `npm run typecheck` | Type-check without emitting |
 
-CI runs typecheck → test → build. It does **not** call Groq.
+CI runs typecheck → test → build. It does **not** call Groq, Gemini, or live PostHog.
 
 ## Layout
 
 ```
 .env.example
+railway.toml
 src/
   index.ts              # stdio entry
+  http.ts               # Streamable HTTP entry (Railway)
+  http/                 # auth, headers, rate limit, app
   server.ts             # MCP server factory
   tools/                # modular tool registration (~25)
   posthog/
@@ -140,7 +201,8 @@ src/
     live/               # live HTTP client
     types.ts errors.ts
 eval/
-  harness.ts            # deterministic evals
+  harness.ts            # deterministic STDIO evals
+  http-harness.ts       # HTTP auth + transport tests
   dataset/tasks.json    # ~80 tasks
   agent/                # LLM providers (Gemini/Groq) + runner
   scoring/              # deterministic scorers
@@ -148,6 +210,7 @@ eval/
   run-compare.ts
   reports/              # git-ignored outputs
 docs/evaluation.md
+docs/deploy-railway.md
 AGENT.md / llms.txt
 ```
 
