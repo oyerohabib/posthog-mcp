@@ -1,4 +1,4 @@
-# <img src="docs/images/logo.svg" alt="posthog-mcp" width="40" height="40" align="absmiddle" /> posthog-mcp
+# <img src="docs/images/logo.png" alt="posthog-mcp" width="40" height="40" align="absmiddle" /> posthog-mcp
 
 MCP server that gives agents a useful PostHog surface: events, persons, feature flags, experiments, insights, cohorts, groups, and project metadata — plus a multi-provider evaluation suite ([Gemini](https://aistudio.google.com/apikey) or [Groq](https://console.groq.com/keys)) that measures whether tools actually help.
 
