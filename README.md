@@ -1,6 +1,6 @@
-# posthog-mcp
+# <img src="docs/images/logo.svg" alt="posthog-mcp" width="40" height="40" align="absmiddle" /> posthog-mcp
 
-MCP server that gives agents a useful PostHog surface: events, persons, feature flags, experiments, insights, cohorts, groups, and project metadata — plus a multi-provider evaluation suite (Gemini or Groq) that measures whether tools actually help.
+MCP server that gives agents a useful PostHog surface: events, persons, feature flags, experiments, insights, cohorts, groups, and project metadata — plus a multi-provider evaluation suite ([Gemini](https://aistudio.google.com/apikey) or [Groq](https://console.groq.com/keys)) that measures whether tools actually help.
 
 **Mock mode is the default** — no API key required. Set `POSTHOG_MODE=live` + credentials to hit a real project. Credentials alone never flip to live.
 
@@ -37,6 +37,11 @@ npm run dev           # stdio MCP server
 ```
 
 ### Agent evaluations (Gemini or Groq)
+
+Get API keys:
+
+- **Gemini** — [Google AI Studio](https://aistudio.google.com/apikey)
+- **Groq** — [Groq Console](https://console.groq.com/keys)
 
 ```bash
 # Gemini recommended on free tier (~250k TPM)
