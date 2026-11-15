@@ -15,10 +15,12 @@ Normal remote users should **not** paste `MCP_API_KEY` or PostHog `phx_` / `phc_
 ```
 
 1. Cursor discovers Protected Resource Metadata and starts **WorkOS AuthKit** OAuth (PKCE).
-2. In Cursor, call **`get_setup_status`**. If status is `needs_posthog` or `needs_project`, open the returned **`connectUrl`** in a browser.
+2. When PostHog is not linked, the MCP server’s **instructions** (and optional `connect_posthog` prompt) tell the agent to call **`get_setup_status`** and ask you to open **`connectUrl`**. You can also call that tool yourself.
 3. The onboarding page starts **PostHog OAuth** (CIMD) automatically, then shows a **project picker**.
 4. When the page says **Connected / Return to Cursor**, go back to Cursor and use PostHog tools (or call `get_setup_status` again — it should be `ready`).
 5. Tokens stay on the server (encrypted). Cursor never sees PostHog secrets.
+
+Cursor cannot open the PostHog browser automatically after WorkOS; you still open `connectUrl` once.
 
 ## Railway variables
 

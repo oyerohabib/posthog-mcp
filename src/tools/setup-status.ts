@@ -50,3 +50,26 @@ export function needsProjectSetupStatus(connectUrl: string): SetupStatus {
     connectUrl,
   };
 }
+
+/**
+ * MCP initialize `instructions` so agents steer users to PostHog connect
+ * without requiring them to discover get_setup_status manually.
+ */
+export function setupInstructions(setup: SetupStatus): string {
+  if (setup.status === "needs_posthog" || setup.status === "needs_project") {
+    const url = setup.connectUrl ?? "";
+    return [
+      "PostHog is not fully linked for this MCP session.",
+      "Before other PostHog tools, call get_setup_status.",
+      "Show the user the connectUrl and ask them to open it in a browser to authorize PostHog and/or select a project.",
+      url ? `connectUrl: ${url}` : "connectUrl is returned by get_setup_status.",
+      "After they finish and return to Cursor, call get_setup_status again until status is ready, then continue.",
+    ].join(" ");
+  }
+  if (setup.status === "ready") {
+    return setup.projectName
+      ? `PostHog is linked (project "${setup.projectName}"). Use the analytics tools as needed.`
+      : "PostHog is linked. Use the analytics tools as needed.";
+  }
+  return "STDIO/local mode: PostHog credentials come from environment variables or the mock client. There is no browser connectUrl.";
+}

@@ -21,4 +21,36 @@ export function registerSetupTools(
     },
     async () => textResult({ ok: true, ...setup }),
   );
+
+  if (setup.status === "needs_posthog" || setup.status === "needs_project") {
+    const connectUrl = setup.connectUrl ?? "";
+    server.registerPrompt(
+      "connect_posthog",
+      {
+        title: "Connect PostHog",
+        description:
+          "Guide the user to authorize PostHog and select a project for this MCP server.",
+        argsSchema: z.object({}),
+      },
+      () => ({
+        messages: [
+          {
+            role: "user" as const,
+            content: {
+              type: "text" as const,
+              text: [
+                "PostHog is not fully linked for this MCP session.",
+                "Call get_setup_status, then ask me to open the connectUrl in a browser.",
+                connectUrl ? `connectUrl: ${connectUrl}` : "",
+                "I will authorize PostHog and pick a project, then return here.",
+                "After that, call get_setup_status again until status is ready.",
+              ]
+                .filter(Boolean)
+                .join("\n"),
+            },
+          },
+        ],
+      }),
+    );
+  }
 }
