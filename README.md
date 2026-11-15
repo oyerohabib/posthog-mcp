@@ -6,6 +6,12 @@ Use PostHog from Cursor (and other MCP clients) with **one URL** — no API keys
 
 You sign in once (WorkOS), then link your PostHog account and pick a project in the browser. After that, agents can call tools like `list_feature_flags`, `query_trends`, and `capture_event` against **your** project. Secrets stay on the server.
 
+**Watch: how to install and connect**
+
+<a href="https://www.loom.com/share/be488179a38d46c998f702b9d6479572">
+  <img src="https://cdn.loom.com/sessions/thumbnails/be488179a38d46c998f702b9d6479572-b9260e21b17b1de7.gif" alt="How to install and connect PostHog MCP" width="640">
+</a>
+
 ---
 
 ## Use it in Cursor (most people)
