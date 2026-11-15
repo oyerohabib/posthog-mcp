@@ -8,6 +8,11 @@ import { registerGroupTools } from "./groups.js";
 import { registerInsightTools } from "./insights.js";
 import { registerPersonTools } from "./persons.js";
 import { registerProjectTools } from "./project.js";
+import { registerSetupTools } from "./setup.js";
+import {
+  localSetupStatus,
+  type SetupStatus,
+} from "./setup-status.js";
 
 /** Expected tool names for contract tests (sorted). */
 export const EXPECTED_TOOL_NAMES = [
@@ -23,6 +28,7 @@ export const EXPECTED_TOOL_NAMES = [
   "get_person",
   "get_person_events",
   "get_project",
+  "get_setup_status",
   "identify_user",
   "list_cohorts",
   "list_dashboards",
@@ -38,7 +44,12 @@ export const EXPECTED_TOOL_NAMES = [
   "update_feature_flag",
 ] as const;
 
-export function registerAllTools(server: McpServer, ph: PostHogClient): void {
+export function registerAllTools(
+  server: McpServer,
+  ph: PostHogClient,
+  setup: SetupStatus = localSetupStatus(),
+): void {
+  registerSetupTools(server, setup);
   registerEventTools(server, ph);
   registerPersonTools(server, ph);
   registerFlagTools(server, ph);
