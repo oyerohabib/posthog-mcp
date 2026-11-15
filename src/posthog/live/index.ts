@@ -59,9 +59,15 @@ import type {
 } from "../types.js";
 
 export type LivePostHogConfig = {
+  /** Project API token (phc_…) for capture / decide */
   apiKey: string;
+  /** Capture/decide host (e.g. https://us.i.posthog.com) */
   host: string;
   personalApiKey?: string;
+  /** OAuth access token (pha_…) for private REST — preferred over personalApiKey */
+  oauthAccessToken?: string;
+  /** Private API app host override (e.g. https://us.posthog.com) */
+  appHost?: string;
   projectId?: string;
 };
 
@@ -79,11 +85,13 @@ export class LivePostHogClient implements PostHogClient {
   }
 
   private requirePrivate(): { appHost: string; projectId: string; token: string } {
-    const token = this.config.personalApiKey?.trim();
+    const token =
+      this.config.oauthAccessToken?.trim() ||
+      this.config.personalApiKey?.trim();
     const projectId = this.config.projectId?.trim();
     if (!token) {
       throw new PostHogAuthError(
-        "POSTHOG_PERSONAL_API_KEY is required for this private API tool",
+        "POSTHOG_PERSONAL_API_KEY or OAuth access token is required for this private API tool",
       );
     }
     if (!projectId) {
@@ -91,7 +99,10 @@ export class LivePostHogClient implements PostHogClient {
         "POSTHOG_PROJECT_ID is required for this private API tool",
       );
     }
-    return { appHost: toAppHost(this.config.host), projectId, token };
+    const appHost =
+      this.config.appHost?.replace(/\/$/, "") ||
+      toAppHost(this.config.host);
+    return { appHost, projectId, token };
   }
 
   private privateHeaders(token: string): Record<string, string> {
