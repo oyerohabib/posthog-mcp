@@ -2,6 +2,8 @@
  * OAuth / PRM / encryption / connection-store tests (CI-safe, no WorkOS/PostHog).
  */
 import { SignJWT } from "jose";
+import { Client } from "@modelcontextprotocol/client";
+import { InMemoryTransport } from "@modelcontextprotocol/server";
 import {
   BearerApiKeyAuthenticator,
   CompositeAuthenticator,
@@ -19,6 +21,9 @@ import {
   protectedResourceMetadata,
   resourceMetadataUrl,
 } from "../src/http/oauth/prm.js";
+import { createOnboardingRequiredClient } from "../src/http/onboarding-client.js";
+import { createPostHogMcpServer } from "../src/server.js";
+import { needsPostHogSetupStatus } from "../src/tools/setup-status.js";
 
 type CaseResult = { name: string; ok: boolean; detail?: string };
 
@@ -294,6 +299,72 @@ async function main() {
         assert(user, "user upserted");
       },
     ),
+  );
+
+  results.push(
+    await runCase("setup: get_setup_status returns needs_posthog + connectUrl", async () => {
+      const connectUrl =
+        "https://example.com/onboarding?user=11111111-1111-1111-1111-111111111111";
+      const stub = createOnboardingRequiredClient(connectUrl);
+      const server = createPostHogMcpServer(
+        stub,
+        needsPostHogSetupStatus(connectUrl),
+      );
+      const [clientTransport, serverTransport] =
+        InMemoryTransport.createLinkedPair();
+      const client = new Client({ name: "oauth-setup", version: "1.0.0" });
+      await server.connect(serverTransport);
+      await client.connect(clientTransport);
+      try {
+        const result = await client.callTool({
+          name: "get_setup_status",
+          arguments: {},
+        });
+        const text =
+          result.content?.find((c) => c.type === "text")?.text ?? "{}";
+        const data = JSON.parse(text) as {
+          status: string;
+          connectUrl?: string;
+        };
+        assert(data.status === "needs_posthog", `status=${data.status}`);
+        assert(
+          data.connectUrl?.includes("/onboarding?user="),
+          `connectUrl=${data.connectUrl}`,
+        );
+      } finally {
+        await client.close().catch(() => undefined);
+        await server.close().catch(() => undefined);
+      }
+    }),
+  );
+
+  results.push(
+    await runCase("http: onboarding redirects to PostHog OAuth start", async () => {
+      process.env.PUBLIC_BASE_URL = "https://example.com";
+      const store = createMemoryStore();
+      const user = await store.upsertUser("wo-redir", "r@example.com");
+      const app = createHttpApp({
+        authenticator: new BearerApiKeyAuthenticator({
+          apiKey: "ops-key",
+          nodeEnv: "test",
+        }),
+        store,
+        useMockPostHog: true,
+        onLog: () => undefined,
+      });
+      const res = await app.fetch(
+        new Request(
+          `https://example.com/onboarding?user=${encodeURIComponent(user.id)}`,
+          { redirect: "manual" },
+        ),
+      );
+      assert(res.status === 302, `status ${res.status}`);
+      const loc = res.headers.get("location") ?? "";
+      assert(
+        loc.includes(`/oauth/posthog/start?user=${encodeURIComponent(user.id)}`),
+        `location=${loc}`,
+      );
+    }),
   );
 
   results.push(
