@@ -3,6 +3,7 @@ import { createPostHogClient, type PostHogClient } from "./posthog/client.js";
 import { registerAllTools } from "./tools/register.js";
 import {
   localSetupStatus,
+  setupInstructions,
   type SetupStatus,
 } from "./tools/setup-status.js";
 
@@ -16,10 +17,15 @@ export function createPostHogMcpServer(
   setup: SetupStatus = localSetupStatus(),
 ): McpServer {
   const ph = client ?? createPostHogClient();
-  const server = new McpServer({
-    name: "posthog-mcp",
-    version: "1.0.0",
-  });
+  const server = new McpServer(
+    {
+      name: "posthog-mcp",
+      version: "1.0.0",
+    },
+    {
+      instructions: setupInstructions(setup),
+    },
+  );
   registerAllTools(server, ph, setup);
   return server;
 }
