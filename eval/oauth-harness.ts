@@ -23,7 +23,11 @@ import {
 } from "../src/http/oauth/prm.js";
 import { createOnboardingRequiredClient } from "../src/http/onboarding-client.js";
 import { createPostHogMcpServer } from "../src/server.js";
-import { needsPostHogSetupStatus } from "../src/tools/setup-status.js";
+import {
+  needsPostHogSetupStatus,
+  readySetupStatus,
+  setupInstructions,
+} from "../src/tools/setup-status.js";
 
 type CaseResult = { name: string; ok: boolean; detail?: string };
 
@@ -302,6 +306,19 @@ async function main() {
   );
 
   results.push(
+    await runCase("setup: instructions include connectUrl when needs_posthog", async () => {
+      const connectUrl =
+        "https://example.com/onboarding?user=11111111-1111-1111-1111-111111111111";
+      const text = setupInstructions(needsPostHogSetupStatus(connectUrl));
+      assert(text.includes("get_setup_status"), "mentions tool");
+      assert(text.includes(connectUrl), "includes connectUrl");
+      const ready = setupInstructions(readySetupStatus("Acme"));
+      assert(ready.includes("Acme"), "ready mentions project");
+      assert(!ready.includes("connectUrl:"), "ready has no connectUrl line");
+    }),
+  );
+
+  results.push(
     await runCase("setup: get_setup_status returns needs_posthog + connectUrl", async () => {
       const connectUrl =
         "https://example.com/onboarding?user=11111111-1111-1111-1111-111111111111";
@@ -316,6 +333,16 @@ async function main() {
       await server.connect(serverTransport);
       await client.connect(clientTransport);
       try {
+        const listed = await client.listTools();
+        assert(
+          listed.tools.some((t) => t.name === "get_setup_status"),
+          "has get_setup_status",
+        );
+        const prompts = await client.listPrompts();
+        assert(
+          prompts.prompts.some((p) => p.name === "connect_posthog"),
+          `expected connect_posthog prompt, got ${prompts.prompts.map((p) => p.name).join(",")}`,
+        );
         const result = await client.callTool({
           name: "get_setup_status",
           arguments: {},
