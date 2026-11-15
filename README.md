@@ -37,16 +37,17 @@ If Cursor shows a connection error that still mentions an onboarding URL, MCP au
 
 ### 3. Link PostHog and pick a project
 
-MCP login ≠ PostHog access. You still need to authorize PostHog once.
+MCP login ≠ PostHog access. You still need to authorize PostHog once in the browser.
 
-1. In Cursor chat, ask the agent to run **`get_setup_status`** (or run that tool yourself).
-2. Read the result:
+After WorkOS, the server sends MCP **instructions** so the agent should call **`get_setup_status`** and show you a **`connectUrl`** (you can also run that tool yourself, or use the **Connect PostHog** prompt if your client lists it). Cursor cannot open that link automatically — open it once.
+
+1. When the agent (or you) runs **`get_setup_status`**:
    - `status: "ready"` → you are done; skip to [Using tools](#4-using-tools).
    - `status: "needs_posthog"` or `"needs_project"` → copy **`connectUrl`** and open it in a browser.
-3. The page starts **PostHog OAuth** (sign in to PostHog if needed, approve access).
-4. **Select the project** you want this MCP to use.
-5. When you see **Connected** / **Return to Cursor**, go back to Cursor.
-6. Optionally run `get_setup_status` again — it should report `ready` and may include your project name.
+2. The page starts **PostHog OAuth** (sign in to PostHog if needed, approve access).
+3. **Select the project** you want this MCP to use.
+4. When you see **Connected** / **Return to Cursor**, go back to Cursor.
+5. Optionally run `get_setup_status` again — it should report `ready` and may include your project name.
 
 If you already have an onboarding link from an error message, you can open that URL directly; it looks like:
 
