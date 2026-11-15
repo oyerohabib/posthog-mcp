@@ -1,32 +1,30 @@
 # Deploy posthog-mcp on Railway (Streamable HTTP)
 
-This runs the **remote HTTP** entrypoint (`src/http.ts`), not STDIO. Clients authenticate with a bearer API key and send **their own** PostHog credentials on every request.
+This runs the **remote HTTP** entrypoint (`src/http.ts`), not STDIO.
 
-Bearer auth is a pragmatic first step — **not** a complete OAuth 2.1 implementation. The `Authenticator` interface in `src/http/auth.ts` is the extension point for OAuth later.
+**Preferred auth:** MCP OAuth (WorkOS AuthKit) + PostHog OAuth onboarding. See [oauth-onboarding.md](./oauth-onboarding.md).
 
 ## What Railway stores
 
-Set only service config:
-
 ```env
 NODE_ENV=production
-MCP_API_KEY=<long random secret>
+PUBLIC_BASE_URL=https://YOUR-DOMAIN
+MCP_RESOURCE_URL=https://YOUR-DOMAIN/mcp
+WORKOS_AUTHKIT_DOMAIN=https://YOUR.authkit.app
+WORKOS_CLIENT_ID=
+WORKOS_API_KEY=
+TOKEN_ENCRYPTION_KEY=<64-char hex>
+DATABASE_URL=<Railway Postgres>
 ```
 
-Optional:
+Optional ops escape hatch:
 
 ```env
-MCP_ALLOWED_ORIGINS=https://app.example.com
-POSTHOG_ALLOWED_HOSTS=
-PORT=<Railway provides this>
+MCP_API_KEY=<long random secret>
+ALLOW_POSTHOG_HEADER_CREDENTIALS=1
 ```
 
-**Do not** set on Railway:
-
-- `POSTHOG_API_KEY` / `POSTHOG_PERSONAL_API_KEY` / `POSTHOG_PROJECT_ID`
-- `GROQ_API_KEY` / `GEMINI_API_KEY`
-
-PostHog keys arrive as request headers. LLM keys are only for local evals.
+**Do not** put user PostHog `phx_` / `phc_` keys or LLM keys in Railway for the normal OAuth path.
 
 ## Build & start
 
@@ -60,60 +58,36 @@ Public MCP URL format:
 https://<railway-public-domain>/mcp
 ```
 
-## Per-request PostHog headers
-
-| Header | Example |
-|--------|---------|
-| `Authorization` | `Bearer <same as MCP_API_KEY>` |
-| `X-PostHog-API-Key` | `phc_…` |
-| `X-PostHog-Personal-API-Key` | `phx_…` |
-| `X-PostHog-Project-ID` | `12345` |
-| `X-PostHog-Host` | `https://us.i.posthog.com` or `https://eu.i.posthog.com` |
-
-Hosts outside the allowlist are rejected (SSRF protection). Extra hosts: `POSTHOG_ALLOWED_HOSTS`.
-
-Missing PostHog headers on `/mcp` return **400** (no silent mock fallback in production HTTP).
-
-## Cursor
+## Cursor (OAuth)
 
 ```json
 {
   "mcpServers": {
     "posthog": {
-      "url": "https://YOUR-RAILWAY-DOMAIN/mcp",
-      "headers": {
-        "Authorization": "Bearer ${env:POSTHOG_MCP_API_KEY}",
-        "X-PostHog-API-Key": "${env:POSTHOG_PROJECT_API_KEY}",
-        "X-PostHog-Personal-API-Key": "${env:POSTHOG_PERSONAL_API_KEY}",
-        "X-PostHog-Project-ID": "${env:POSTHOG_PROJECT_ID}",
-        "X-PostHog-Host": "https://us.i.posthog.com"
-      }
+      "url": "https://YOUR-RAILWAY-DOMAIN/mcp"
     }
   }
 }
 ```
 
-Set `POSTHOG_MCP_API_KEY` to the same value as Railway `MCP_API_KEY`.
+Then complete PostHog connect + project selection via `/onboarding?user=…`.
 
 ## Security notes
 
-- Production refuses to start without `MCP_API_KEY`.
-- Secrets are compared with `timingSafeEqual` and never logged (headers redacted).
+- Production requires WorkOS OAuth config and/or `MCP_API_KEY`.
+- PostHog tokens encrypted at rest (`TOKEN_ENCRYPTION_KEY`).
 - Browser `Origin` is rejected unless listed in `MCP_ALLOWED_ORIGINS`.
 - Body size capped (~1MB); basic per-IP rate limiting applies.
-- This is **not** multi-tenant OAuth; anyone with the bearer key can call the service (with their own PostHog headers).
 
 ## Troubleshooting
 
 | Symptom | Likely cause |
 |---------|----------------|
-| `503` / won't start | Missing `MCP_API_KEY` in production |
-| `401` on `/mcp` | Wrong/missing `Authorization: Bearer …` |
-| `400` Missing X-PostHog-… | Client omitted PostHog headers |
-| `400` host not allowed | Host not in allowlist / not https |
+| `503` / won't start | Missing WorkOS + `MCP_RESOURCE_URL` and no `MCP_API_KEY` |
+| `401` on `/mcp` | Complete Cursor MCP OAuth (check PRM / AuthKit) |
+| `403` + onboarding URL | Connect PostHog + select project |
 | `403` Origin | Browser Origin not in `MCP_ALLOWED_ORIGINS` |
-| Cursor can't connect | Domain not generated under Railway Networking; wrong `/mcp` path |
-| Tools fail upstream | Invalid PostHog personal key / project id for that region |
+| Cursor can't connect | Domain / wrong `/mcp` path / AuthKit misconfigured |
 
 ## Local smoke test
 
