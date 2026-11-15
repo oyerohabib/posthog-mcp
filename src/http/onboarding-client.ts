@@ -8,7 +8,7 @@ import { PostHogAuthError } from "../posthog/errors.js";
 export function createOnboardingRequiredClient(
   onboardingUrl: string,
 ): PostHogClient {
-  const message = `PostHog connection required. Open ${onboardingUrl}`;
+  const message = `PostHog connection required. Call get_setup_status for status and connectUrl, or open ${onboardingUrl}`;
 
   return new Proxy(
     { mode: "live" as PostHogMode },

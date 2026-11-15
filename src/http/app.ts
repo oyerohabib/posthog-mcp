@@ -28,6 +28,12 @@ import {
   resourceMetadataUrl,
 } from "./oauth/prm.js";
 import { resolveUserPostHogClient } from "./resolve-client.js";
+import {
+  needsPostHogSetupStatus,
+  needsProjectSetupStatus,
+  readySetupStatus,
+  type SetupStatus,
+} from "../tools/setup-status.js";
 
 const MCP_PATH = "/mcp";
 const HEALTH_PATH = "/health";
@@ -123,7 +129,8 @@ export function createHttpApp(options: AppOptions = {}): CreateAppResult {
     request: Request,
     principal: Principal,
   ): Promise<
-    { ok: true; client: PostHogClient } | { ok: false; response: Response }
+    | { ok: true; client: PostHogClient; setup: SetupStatus }
+    | { ok: false; response: Response }
   > {
     if (useMockPostHog) {
       if (process.env.NODE_ENV === "production") {
@@ -134,7 +141,11 @@ export function createHttpApp(options: AppOptions = {}): CreateAppResult {
           }),
         };
       }
-      return { ok: true, client: new MockPostHogClient() };
+      return {
+        ok: true,
+        client: new MockPostHogClient(),
+        setup: readySetupStatus("mock"),
+      };
     }
 
     if (principal.type === "oauth") {
@@ -153,10 +164,26 @@ export function createHttpApp(options: AppOptions = {}): CreateAppResult {
       // Keep MCP connected (initialize / tools/list) even before PostHog OAuth;
       // tool calls return the onboarding URL instead of failing the HTTP session.
       if (!resolved.ok) {
-        log("posthog onboarding required", { userId: user.id, link });
-        return { ok: true, client: createOnboardingRequiredClient(link) };
+        log("posthog onboarding required", {
+          userId: user.id,
+          link,
+          reason: resolved.reason,
+        });
+        const setup =
+          resolved.reason === "needs_project"
+            ? needsProjectSetupStatus(link)
+            : needsPostHogSetupStatus(link);
+        return {
+          ok: true,
+          client: createOnboardingRequiredClient(link),
+          setup,
+        };
       }
-      return { ok: true, client: resolved.client };
+      return {
+        ok: true,
+        client: resolved.client,
+        setup: readySetupStatus(resolved.projectName),
+      };
     }
 
     // api_key principal: header credentials (legacy / ops); always accepted outside
@@ -164,7 +191,11 @@ export function createHttpApp(options: AppOptions = {}): CreateAppResult {
     if (allowHeaderCredentials || process.env.NODE_ENV !== "production") {
       const parsed = parsePostHogHeaders(request.headers);
       if (parsed.ok) {
-        return { ok: true, client: createLiveClientFromHeaders(parsed.config) };
+        return {
+          ok: true,
+          client: createLiveClientFromHeaders(parsed.config),
+          setup: readySetupStatus(),
+        };
       }
       return {
         ok: false,
@@ -253,11 +284,14 @@ export function createHttpApp(options: AppOptions = {}): CreateAppResult {
       headers: redactHeaders(Object.fromEntries(request.headers.entries())),
     });
 
-    const client = ph.client;
-    const mcpHandler = createMcpHandler(() => createPostHogMcpServer(client), {
-      legacy: "stateless",
-      maxRequestBodySize: 1_000_000,
-    });
+    const { client, setup } = ph;
+    const mcpHandler = createMcpHandler(
+      () => createPostHogMcpServer(client, setup),
+      {
+        legacy: "stateless",
+        maxRequestBodySize: 1_000_000,
+      },
+    );
 
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
     try {

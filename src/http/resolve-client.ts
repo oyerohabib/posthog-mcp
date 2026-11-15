@@ -17,8 +17,14 @@ import {
 import { publicBaseUrl } from "./oauth/prm.js";
 
 export type ResolveResult =
-  | { ok: true; client: PostHogClient }
-  | { ok: false; status: 403 | 401; message: string; onboardingUrl: string };
+  | { ok: true; client: PostHogClient; projectName?: string | null }
+  | {
+      ok: false;
+      status: 403 | 401;
+      message: string;
+      onboardingUrl: string;
+      reason: "needs_posthog" | "needs_project" | "api_key";
+    };
 
 export async function resolveUserPostHogClient(opts: {
   principal: Principal;
@@ -35,6 +41,7 @@ export async function resolveUserPostHogClient(opts: {
       message:
         "API key auth cannot use stored PostHog OAuth connections; pass X-PostHog-* headers or complete OAuth onboarding",
       onboardingUrl,
+      reason: "api_key",
     };
   }
 
@@ -52,6 +59,7 @@ export async function resolveUserPostHogClient(opts: {
       status: 403,
       message: `Connect PostHog to use these tools: ${onboardingUrl}`,
       onboardingUrl,
+      reason: "needs_posthog",
     };
   }
 
@@ -62,6 +70,7 @@ export async function resolveUserPostHogClient(opts: {
       status: 403,
       message: `Select a PostHog project: ${onboardingUrl}`,
       onboardingUrl,
+      reason: "needs_project",
     };
   }
 
@@ -111,6 +120,7 @@ export async function resolveUserPostHogClient(opts: {
       status: 403,
       message: `Project API token missing — reconnect PostHog: ${onboardingUrl}`,
       onboardingUrl,
+      reason: "needs_posthog",
     };
   }
 
@@ -122,5 +132,5 @@ export async function resolveUserPostHogClient(opts: {
     projectId: selection.projectId,
   });
 
-  return { ok: true, client };
+  return { ok: true, client, projectName: selection.projectName };
 }
