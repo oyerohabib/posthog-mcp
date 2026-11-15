@@ -42,9 +42,11 @@ npm run dev:http      # remote Streamable HTTP MCP (needs MCP_API_KEY)
 | Mode | Entry | Auth | PostHog credentials |
 |------|--------|------|---------------------|
 | **STDIO** (local) | `npm run dev` | Process env | `.env` / `POSTHOG_MODE` |
-| **HTTP** (remote) | `npm run dev:http` / Railway | `Authorization: Bearer <MCP_API_KEY>` | Per-request headers (live required) |
+| **HTTP** (remote) | `npm run dev:http` / Railway | **OAuth 2.1** (WorkOS AuthKit) | **PostHog OAuth** + project picker (stored encrypted) |
 
-Bearer API-key auth is **not** a full OAuth 2.1 flow. The authenticator is structured so OAuth can be added later without rewriting tools.
+End users add only the MCP URL in Cursor — no shared `MCP_API_KEY` and no `phx_` / `phc_` headers. See [docs/oauth-onboarding.md](./docs/oauth-onboarding.md).
+
+Ops may still use `MCP_API_KEY` + `X-PostHog-*` headers when `ALLOW_POSTHOG_HEADER_CREDENTIALS=1`.
 
 See [docs/deploy-railway.md](./docs/deploy-railway.md) for hosting.
 
@@ -135,38 +137,19 @@ npx @modelcontextprotocol/inspector -- npx tsx src/index.ts
 
 ### Cursor — remote HTTP (Railway)
 
-After deploying (see [docs/deploy-railway.md](./docs/deploy-railway.md)), point Cursor at your public URL. Prefer env interpolation so secrets stay out of the config file:
+After deploying OAuth (see [docs/oauth-onboarding.md](./docs/oauth-onboarding.md)):
 
 ```json
 {
   "mcpServers": {
     "posthog": {
-      "url": "https://YOUR-RAILWAY-DOMAIN/mcp",
-      "headers": {
-        "Authorization": "Bearer ${env:POSTHOG_MCP_API_KEY}",
-        "X-PostHog-API-Key": "${env:POSTHOG_PROJECT_API_KEY}",
-        "X-PostHog-Personal-API-Key": "${env:POSTHOG_PERSONAL_API_KEY}",
-        "X-PostHog-Project-ID": "${env:POSTHOG_PROJECT_ID}",
-        "X-PostHog-Host": "https://us.i.posthog.com"
-      }
+      "url": "https://YOUR-RAILWAY-DOMAIN/mcp"
     }
   }
 }
 ```
 
-For EU cloud, set `X-PostHog-Host` to `https://eu.i.posthog.com`.
-
-Define `POSTHOG_MCP_API_KEY` (same value as Railway `MCP_API_KEY`) and your PostHog keys in the environment Cursor can read (shell profile, Cursor secrets, or OS env).
-
-| Header | Required | Purpose |
-|--------|----------|---------|
-| `Authorization: Bearer …` | yes | Service auth (`MCP_API_KEY`) |
-| `X-PostHog-API-Key` | yes | Project key (`phc_…`) |
-| `X-PostHog-Personal-API-Key` | yes | Personal key (`phx_…`) |
-| `X-PostHog-Project-ID` | yes | Numeric project id |
-| `X-PostHog-Host` | no | Defaults to US cloud |
-
-Endpoints: `GET /health`, Streamable HTTP MCP on `/mcp`.
+Cursor performs MCP OAuth with WorkOS AuthKit. Then open the onboarding URL to connect PostHog and pick a project. Endpoints: `GET /health`, Streamable HTTP `/mcp`, CIMD `/oauth/posthog-client`.
 
 ## Scripts
 
@@ -177,7 +160,7 @@ Endpoints: `GET /health`, Streamable HTTP MCP on `/mcp`.
 | `npm run build` | Compile TypeScript to `dist/` |
 | `npm start` | Run compiled STDIO server |
 | `npm run start:http` | Run compiled HTTP server (Railway) |
-| `npm test` | STDIO harness + HTTP auth/transport tests |
+| `npm test` | STDIO + HTTP + OAuth harness tests |
 | `npm run eval` | STDIO contract tests only |
 | `npm run eval:agent` | Agent eval via Gemini or Groq |
 | `npm run eval:compare` | With-tools vs no-tools comparison |
@@ -193,7 +176,7 @@ railway.toml
 src/
   index.ts              # stdio entry
   http.ts               # Streamable HTTP entry (Railway)
-  http/                 # auth, headers, rate limit, app
+  http/                 # auth (API key + WorkOS JWT), OAuth PRM, onboarding, DB
   server.ts             # MCP server factory
   tools/                # modular tool registration (~25)
   posthog/
