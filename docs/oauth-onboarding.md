@@ -15,8 +15,10 @@ Normal remote users should **not** paste `MCP_API_KEY` or PostHog `phx_` / `phc_
 ```
 
 1. Cursor discovers Protected Resource Metadata and starts **WorkOS AuthKit** OAuth (PKCE).
-2. After sign-in, open the onboarding link returned by tools (or `/onboarding?user=…`) to **authorize PostHog** (CIMD) and **select a project**.
-3. Tokens stay on the server (encrypted). Cursor never sees PostHog secrets.
+2. In Cursor, call **`get_setup_status`**. If status is `needs_posthog` or `needs_project`, open the returned **`connectUrl`** in a browser.
+3. The onboarding page starts **PostHog OAuth** (CIMD) automatically, then shows a **project picker**.
+4. When the page says **Connected / Return to Cursor**, go back to Cursor and use PostHog tools (or call `get_setup_status` again — it should be `ready`).
+5. Tokens stay on the server (encrypted). Cursor never sees PostHog secrets.
 
 ## Railway variables
 
@@ -40,7 +42,7 @@ Normal remote users should **not** paste `MCP_API_KEY` or PostHog `phx_` / `phc_
 | `GET /.well-known/oauth-protected-resource/mcp` | Path-scoped PRM |
 | `POST /mcp` | Streamable HTTP MCP |
 | `GET /oauth/posthog-client` | PostHog CIMD |
-| `GET /onboarding` | Connect / status UI |
+| `GET /onboarding` | Connect / status UI (auto-starts PostHog OAuth when needed) |
 | `GET /oauth/posthog/start` | Start PostHog OAuth |
 | `GET /oauth/posthog/callback` | OAuth callback |
 | `GET\|POST /onboarding/projects` | Project picker |

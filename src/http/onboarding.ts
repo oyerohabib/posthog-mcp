@@ -77,23 +77,25 @@ export function createOnboardingHandler(store: ConnectionStore) {
       const connection = await store.getConnectionByUserId(userId);
       const selection = await store.getProjectSelection(userId);
       if (!connection) {
-        return html(
-          `<h1>Connect PostHog</h1>
-           <p>Signed in as ${user.email ?? user.id}</p>
-           <p><a class="button" href="/oauth/posthog/start?user=${encodeURIComponent(userId)}">Authorize PostHog</a></p>`,
+        // Zero-click: start PostHog OAuth immediately
+        return Response.redirect(
+          `${base}/oauth/posthog/start?user=${encodeURIComponent(userId)}`,
+          302,
         );
       }
       if (!selection) {
-        return html(
-          `<h1>Select a project</h1>
-           <p><a class="button" href="/onboarding/projects?user=${encodeURIComponent(userId)}">Choose project</a></p>
-           <p><a href="/oauth/posthog/disconnect?user=${encodeURIComponent(userId)}">Disconnect PostHog</a></p>`,
+        return Response.redirect(
+          `${base}/onboarding/projects?user=${encodeURIComponent(userId)}`,
+          302,
         );
       }
+      const projectLabel = selection.projectName ?? selection.projectId;
       return html(
         `<h1>Connected</h1>
-         <p>Project <strong>${selection.projectName ?? selection.projectId}</strong> is linked.</p>
-         <p>You can return to Cursor and use the PostHog tools.</p>
+         <p>Signed in as ${user.email ?? user.id}</p>
+         <p>Project <strong>${projectLabel}</strong> is linked to Analytics MCP.</p>
+         <p><strong>Return to Cursor</strong> and run your PostHog tools again
+            (or call <code>get_setup_status</code> — it should report <code>ready</code>).</p>
          <p><a href="/onboarding/projects?user=${encodeURIComponent(userId)}">Change project</a> ·
             <a href="/oauth/posthog/disconnect?user=${encodeURIComponent(userId)}">Disconnect</a></p>`,
       );
@@ -199,7 +201,9 @@ export function createOnboardingHandler(store: ConnectionStore) {
           )
           .join("");
         return html(
-          `<h1>Select a PostHog project</h1><ul>${items || "<li>No projects found</li>"}</ul>`,
+          `<h1>Select a PostHog project</h1>
+           <p>Choose which project Analytics MCP should use. You can change this later.</p>
+           <ul>${items || "<li>No projects found</li>"}</ul>`,
         );
       } catch (e) {
         return html(

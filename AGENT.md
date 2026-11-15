@@ -63,6 +63,10 @@ Mock seeded flags:
 
 `get_project`, `list_dashboards`
 
+### Setup (remote HTTP)
+
+`get_setup_status` — call first on remote MCP; if `needs_posthog` / `needs_project`, tell the user to open `connectUrl`, then retry.
+
 ## Safety
 
 - Never invent PostHog data when tools are available — call tools.
@@ -72,10 +76,11 @@ Mock seeded flags:
 
 ## Preferred discovery order
 
-1. `get_project` / `list_feature_flags` / `list_group_types` — orient
-2. Read tools (`get_*`, `list_*`, `query_*`)
-3. `identify_user` / `capture_event` when recording state
-4. Flag writes only when confirmed
+1. On remote MCP: `get_setup_status` — if not `ready`, ask the user to open `connectUrl`
+2. `get_project` / `list_feature_flags` / `list_group_types` — orient
+3. Read tools (`get_*`, `list_*`, `query_*`)
+4. `identify_user` / `capture_event` when recording state
+5. Flag writes only when confirmed
 
 ## Error handling
 

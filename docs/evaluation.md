@@ -5,7 +5,7 @@ This project measures whether PostHog MCP tools help a hosted model complete rea
 ## Layers
 
 1. **Deterministic harness** (`npm test` / `npm run eval`)  
-   Real MCP over in-memory transport. Contract checks (25 tools, confirm schemas), happy paths, validation failures, and dataset shape (80 tasks). **No LLM API key. Used in CI.**
+   Real MCP over in-memory transport. Contract checks (tool list + confirm schemas), happy paths, validation failures, and dataset shape (80 tasks). **No LLM API key. Used in CI.**
 
 2. **Agent eval** (`npm run eval:agent`)  
    Gemini or Groq via OpenAI-compatible APIs. Tools come from live MCP `listTools()` schemas (not duplicated). Default mode uses the mock PostHog client so outcomes are checkable.
