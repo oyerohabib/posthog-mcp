@@ -1,125 +1,146 @@
 # <img src="docs/images/logo.png" alt="posthog-mcp" width="40" height="40" align="absmiddle" /> posthog-mcp
 
-MCP server that gives agents a useful PostHog surface: events, persons, feature flags, experiments, insights, cohorts, groups, and project metadata — plus a multi-provider evaluation suite ([Gemini](https://aistudio.google.com/apikey) or [Groq](https://console.groq.com/keys)) that measures whether tools actually help.
+Use PostHog from Cursor (and other MCP clients) with **one URL** — no API keys pasted into your editor.
 
-**Mock mode is the default** — no API key required. Set `POSTHOG_MODE=live` + credentials to hit a real project. Credentials alone never flip to live.
+**Public MCP endpoint:** [`https://posthog-mcp.up.railway.app/mcp`](https://posthog-mcp.up.railway.app/mcp)
 
-## Why agents use this
+You sign in once (WorkOS), then link your PostHog account and pick a project in the browser. After that, agents can call tools like `list_feature_flags`, `query_trends`, and `capture_event` against **your** project. Secrets stay on the server.
 
-Agents need tools they can call, not dashboards they can screenshot. This repo ships:
+---
 
-- ~25 MCP tools with clear Zod schemas
-- A stateful mock PostHog client for offline workflows and evals
-- An 80-task evaluation dataset
-- Agent evals via Gemini or Groq comparing tool-assisted vs no-tool performance
+## Use it in Cursor (most people)
 
-## Tools (26)
+### 1. Add the server
+
+Open Cursor MCP settings and add:
+
+```json
+{
+  "mcpServers": {
+    "posthog": {
+      "url": "https://posthog-mcp.up.railway.app/mcp"
+    }
+  }
+}
+```
+
+Save and enable/connect the **posthog** server. You should **not** add `Authorization` headers, `MCP_API_KEY`, or PostHog `phx_` / `phc_` keys here.
+
+### 2. Sign in (WorkOS)
+
+When Cursor connects, it should open a browser for **WorkOS AuthKit** sign-in / sign-up.
+
+- Complete that flow and return to Cursor.
+- The MCP server should show as connected (on the order of **26 tools**).
+
+If Cursor shows a connection error that still mentions an onboarding URL, MCP auth may already have succeeded — continue with step 3.
+
+### 3. Link PostHog and pick a project
+
+MCP login ≠ PostHog access. You still need to authorize PostHog once.
+
+1. In Cursor chat, ask the agent to run **`get_setup_status`** (or run that tool yourself).
+2. Read the result:
+   - `status: "ready"` → you are done; skip to [Using tools](#4-using-tools).
+   - `status: "needs_posthog"` or `"needs_project"` → copy **`connectUrl`** and open it in a browser.
+3. The page starts **PostHog OAuth** (sign in to PostHog if needed, approve access).
+4. **Select the project** you want this MCP to use.
+5. When you see **Connected** / **Return to Cursor**, go back to Cursor.
+6. Optionally run `get_setup_status` again — it should report `ready` and may include your project name.
+
+If you already have an onboarding link from an error message, you can open that URL directly; it looks like:
+
+`https://posthog-mcp.up.railway.app/onboarding?user=<your-id>`
+
+### 4. Using tools
+
+Examples you can ask for:
+
+| Goal | Example tool |
+|------|----------------|
+| Check setup | `get_setup_status` |
+| List flags | `list_feature_flags` |
+| Evaluate a flag | `get_feature_flag` |
+| Trends / funnel / retention | `query_trends`, `query_funnel`, `query_retention` |
+| Capture an event | `capture_event` |
+| Look up a person | `get_person`, `list_persons` |
+
+Flag **create/update** tools require `confirm: true`. There are **no delete** tools.
+
+### 5. Change project or disconnect
+
+Open your onboarding page again (from `get_setup_status` → `connectUrl`, or a previous `/onboarding?user=…` link):
+
+- **Change project** — pick another project you can access  
+- **Disconnect** — revoke PostHog access for this MCP user  
+
+Then return to Cursor and retry tools.
+
+### What you never put in Cursor
+
+- PostHog personal keys (`phx_…`) or project keys (`phc_…`)
+- Shared `MCP_API_KEY` / bearer tokens
+- WorkOS or Railway secrets
+
+### Troubleshooting (consumers)
+
+| What you see | What to do |
+|--------------|------------|
+| Cursor never opens a login browser | Confirm the URL is exactly `https://posthog-mcp.up.railway.app/mcp` (include `/mcp`). Toggle the server off/on. |
+| Connected but tools say PostHog connection required | Run `get_setup_status`, open `connectUrl`, finish authorize + project select. |
+| `get_setup_status` missing from the tool list | Disconnect and reconnect the MCP server so Cursor refreshes tools (expect ~26 tools). |
+| Tools fail after you thought you connected | Confirm the onboarding page says **Connected** for the right project; run `get_setup_status` again. |
+| Want a different PostHog project | Use Change project on the onboarding page, then retry in Cursor. |
+
+Health check (optional): [https://posthog-mcp.up.railway.app/health](https://posthog-mcp.up.railway.app/health) should return `{"ok":true}`.
+
+---
+
+## What this MCP can do
+
+26 tools covering a focused analytics surface: setup, events, persons, feature flags, experiments, insights, cohorts, groups, and project metadata.
 
 | Category | Tools |
 |----------|--------|
-| Setup | `get_setup_status` (remote: PostHog connect link / ready check) |
+| Setup | `get_setup_status` |
 | Events & users | `capture_event`, `identify_user`, `get_person`, `list_persons`, `get_person_events` |
 | Flags & experiments | `get_feature_flag`, `list_feature_flags`, `get_feature_flag_definition`, `create_feature_flag`, `update_feature_flag`, `list_experiments`, `get_experiment` |
 | Insights | `query_trends`, `query_funnel`, `query_retention`, `list_insights`, `get_insight` |
 | Cohorts & groups | `list_cohorts`, `get_cohort`, `get_cohort_persons`, `list_group_types`, `list_groups`, `find_group` |
 | Project | `get_project`, `list_dashboards` |
 
-Write tools that change flag definitions require `confirm: true`. Deletes and other destructive APIs are intentionally not exposed.
+This is a **sample** of everyday analytics tools, not PostHog’s full hosted catalog. For the broader product MCP, see [PostHog MCP](https://posthog.com/mcp) and the [tools reference](https://posthog.com/docs/model-context-protocol/tools).
 
-Mock seeded flags: `new-onboarding=true`, `beta-insights=false`, `pricing-experiment="control"`.
+### How auth works (short)
 
-## Run locally
+| Layer | Purpose |
+|-------|---------|
+| Cursor ↔ this server | WorkOS proves **who** is using the MCP |
+| This server ↔ PostHog | Your linked account + selected project (encrypted on the server) |
+
+More detail: [docs/oauth-onboarding.md](./docs/oauth-onboarding.md).
+
+---
+
+## Self-host or develop (optional)
+
+Most users can ignore this section and use the public URL above.
+
+- **Deploy your own:** [docs/deploy-railway.md](./docs/deploy-railway.md), [docs/oauth-onboarding.md](./docs/oauth-onboarding.md)
+- **Local STDIO / mock / evals:** see below
+
+### Local development & STDIO
+
+For contributing, running tests, or stdio MCP with env credentials — **not** required to consume the public server.
 
 ```bash
 npm install
-npm test              # deterministic MCP + HTTP auth/transport tests (no LLM keys)
-npm run eval          # STDIO contract tests only
-npm run dev           # stdio MCP server
-npm run dev:http      # remote Streamable HTTP MCP (needs MCP_API_KEY)
+npm test
+npm run dev           # STDIO MCP (mock by default)
+npm run dev:http      # local HTTP MCP
 ```
 
-### Local STDIO vs remote HTTP
-
-| Mode | Entry | Auth | PostHog credentials |
-|------|--------|------|---------------------|
-| **STDIO** (local) | `npm run dev` | Process env | `.env` / `POSTHOG_MODE` |
-| **HTTP** (remote) | `npm run dev:http` / Railway | **OAuth 2.1** (WorkOS AuthKit) | **PostHog OAuth** + project picker (stored encrypted) |
-
-End users add only the MCP URL in Cursor — no shared `MCP_API_KEY` and no `phx_` / `phc_` headers. See [docs/oauth-onboarding.md](./docs/oauth-onboarding.md).
-
-Ops may still use `MCP_API_KEY` + `X-PostHog-*` headers when `ALLOW_POSTHOG_HEADER_CREDENTIALS=1`.
-
-See [docs/deploy-railway.md](./docs/deploy-railway.md) for hosting.
-
-### Agent evaluations (Gemini or Groq)
-
-Get API keys:
-
-- **Gemini** — [Google AI Studio](https://aistudio.google.com/apikey)
-- **Groq** — [Groq Console](https://console.groq.com/keys)
-
-```bash
-# Gemini recommended on free tier (~250k TPM)
-npm run eval:agent -- --provider gemini --limit 5 --trials 1
-npm run eval:compare -- --provider gemini --limit 5 --trials 1
-
-# Groq still supported
-npm run eval:agent -- --provider groq --limit 5
-```
-
-Provider resolution: `--provider` > `EVAL_PROVIDER` > `GEMINI_API_KEY` if set > `GROQ_API_KEY`.
-
-See [docs/evaluation.md](./docs/evaluation.md) for scoring, reports, and free-tier limits.
-
-### Configuration (`.env`)
-
-Copy [`.env.example`](./.env.example):
-
-```bash
-POSTHOG_MODE=mock
-POSTHOG_API_KEY=phc_xxx
-POSTHOG_HOST=https://us.i.posthog.com
-POSTHOG_PERSONAL_API_KEY=phx_xxx
-POSTHOG_PROJECT_ID=12345
-
-# Remote HTTP (Railway / npm run dev:http)
-MCP_API_KEY=your_long_random_secret
-PORT=8787
-
-EVAL_PROVIDER=gemini
-GEMINI_API_KEY=...
-GEMINI_MODEL=gemini-3.5-flash-lite
-
-GROQ_API_KEY=gsk_xxx
-GROQ_MODEL=openai/gpt-oss-120b
-```
-
-| Variable | Default | Notes |
-|----------|---------|-------|
-| `POSTHOG_MODE` | `mock` | STDIO only — `live` enables real network calls |
-| `POSTHOG_API_KEY` | — | STDIO project API key (`phc_...`) |
-| `POSTHOG_HOST` | `https://us.i.posthog.com` | Use `https://eu.i.posthog.com` for EU |
-| `POSTHOG_PERSONAL_API_KEY` | — | STDIO personal key (`phx_...`) |
-| `POSTHOG_PROJECT_ID` | — | STDIO project id |
-| `MCP_API_KEY` | — | **Required in production HTTP** — bearer secret |
-| `PORT` | `8787` | HTTP listen port (Railway sets this) |
-| `MCP_ALLOWED_ORIGINS` | empty | Comma-separated browser Origins (optional) |
-| `POSTHOG_ALLOWED_HOSTS` | cloud defaults | Extra allowed PostHog hostnames |
-| `EVAL_PROVIDER` | auto | `gemini` or `groq` |
-| `GEMINI_API_KEY` | — | Google AI Studio key for agent evals |
-| `GEMINI_MODEL` | `gemini-3.5-flash-lite` | Gemini model id |
-| `GROQ_API_KEY` | — | Groq key for agent evals |
-| `GROQ_MODEL` | `openai/gpt-oss-120b` | Groq model id |
-
-`.env` is git-ignored — never commit real keys. Do **not** put PostHog/Gemini/Groq keys in Railway for the HTTP service; PostHog credentials are sent per request.
-
-### MCP Inspector
-
-```bash
-npx @modelcontextprotocol/inspector -- npx tsx src/index.ts
-```
-
-### Cursor / Claude Desktop — local STDIO
+**Cursor / Claude — local STDIO**
 
 ```json
 {
@@ -136,74 +157,26 @@ npx @modelcontextprotocol/inspector -- npx tsx src/index.ts
 }
 ```
 
-### Cursor — remote HTTP (Railway)
+Mock seeded flags: `new-onboarding=true`, `beta-insights=false`, `pricing-experiment="control"`.
 
-After deploying OAuth (see [docs/oauth-onboarding.md](./docs/oauth-onboarding.md)):
+Copy [`.env.example`](./.env.example) for STDIO live mode (`POSTHOG_MODE=live`, `phc_` / `phx_`, project id) and for self-hosted HTTP OAuth vars. Never commit real keys.
 
-```json
-{
-  "mcpServers": {
-    "posthog": {
-      "url": "https://YOUR-RAILWAY-DOMAIN/mcp"
-    }
-  }
-}
+| Script | Purpose |
+|--------|---------|
+| `npm test` | STDIO + HTTP + OAuth harnesses (CI) |
+| `npm run eval:agent` / `eval:compare` | Gemini / Groq agent evals — [docs/evaluation.md](./docs/evaluation.md) |
+| `npm run typecheck` / `build` / `start:http` | Typecheck, compile, run HTTP |
+
+```bash
+npx @modelcontextprotocol/inspector -- npx tsx src/index.ts
 ```
 
-Cursor performs MCP OAuth with WorkOS AuthKit. Then call `get_setup_status` and open `connectUrl` to authorize PostHog and pick a project. Endpoints: `GET /health`, Streamable HTTP `/mcp`, CIMD `/oauth/posthog-client`.
-
-## Scripts
-
-| Script | What it does |
-|--------|----------------|
-| `npm run dev` | Start stdio MCP server via tsx |
-| `npm run dev:http` | Start Streamable HTTP MCP server |
-| `npm run build` | Compile TypeScript to `dist/` |
-| `npm start` | Run compiled STDIO server |
-| `npm run start:http` | Run compiled HTTP server (Railway) |
-| `npm test` | STDIO + HTTP + OAuth harness tests |
-| `npm run eval` | STDIO contract tests only |
-| `npm run eval:agent` | Agent eval via Gemini or Groq |
-| `npm run eval:compare` | With-tools vs no-tools comparison |
-| `npm run typecheck` | Type-check without emitting |
-
-CI runs typecheck → test → build. It does **not** call Groq, Gemini, or live PostHog.
-
-## Layout
-
-```
-.env.example
-railway.toml
-src/
-  index.ts              # stdio entry
-  http.ts               # Streamable HTTP entry (Railway)
-  http/                 # auth (API key + WorkOS JWT), OAuth PRM, onboarding, DB
-  server.ts             # MCP server factory
-  tools/                # modular tool registration (~25)
-  posthog/
-    mock/               # stateful mock + seed data
-    live/               # live HTTP client
-    types.ts errors.ts
-eval/
-  harness.ts            # deterministic STDIO evals
-  http-harness.ts       # HTTP auth + transport tests
-  dataset/tasks.json    # ~80 tasks
-  agent/                # LLM providers (Gemini/Groq) + runner
-  scoring/              # deterministic scorers
-  run-agent.ts
-  run-compare.ts
-  reports/              # git-ignored outputs
-docs/evaluation.md
-docs/deploy-railway.md
-AGENT.md / llms.txt
-```
-
-## Extending
+### Extending the tools
 
 1. Add a method on `PostHogClient` in `src/posthog/types.ts`
-2. Implement it in `src/posthog/mock/` and `src/posthog/live/`
-3. Register a tool under `src/tools/` and call it from `register.ts`
-4. Add harness coverage + dataset tasks as needed
+2. Implement in `src/posthog/mock/` and `src/posthog/live/`
+3. Register under `src/tools/` via `register.ts`
+4. Add harness coverage as needed
 
 ## License
 
