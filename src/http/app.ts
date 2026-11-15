@@ -20,6 +20,7 @@ import { FixedWindowRateLimiter } from "./rate-limit.js";
 import type { ConnectionStore } from "./db/types.js";
 import { createMemoryStore } from "./db/memory.js";
 import { createOnboardingHandler, ensureUserQueryLink } from "./onboarding.js";
+import { createOnboardingRequiredClient } from "./onboarding-client.js";
 import {
   protectedResourceMetadata,
   publicBaseUrl,
@@ -141,6 +142,7 @@ export function createHttpApp(options: AppOptions = {}): CreateAppResult {
         principal.workosUserId ?? principal.id,
         principal.email,
       );
+      const link = ensureUserQueryLink(user.id);
       const resolved = await resolveUserPostHogClient({
         principal: {
           ...principal,
@@ -148,15 +150,11 @@ export function createHttpApp(options: AppOptions = {}): CreateAppResult {
         },
         store,
       });
+      // Keep MCP connected (initialize / tools/list) even before PostHog OAuth;
+      // tool calls return the onboarding URL instead of failing the HTTP session.
       if (!resolved.ok) {
-        const link = ensureUserQueryLink(user.id);
-        return {
-          ok: false,
-          response: json(resolved.status, {
-            error: `PostHog connection required. Open ${link}`,
-            onboardingUrl: link,
-          }),
-        };
+        log("posthog onboarding required", { userId: user.id, link });
+        return { ok: true, client: createOnboardingRequiredClient(link) };
       }
       return { ok: true, client: resolved.client };
     }

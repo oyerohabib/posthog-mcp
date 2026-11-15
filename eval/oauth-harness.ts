@@ -251,6 +251,52 @@ async function main() {
   );
 
   results.push(
+    await runCase(
+      "http: oauth without PostHog still initializes MCP",
+      async () => {
+        process.env.PUBLIC_BASE_URL = "https://example.com";
+        const pendingStore = createMemoryStore();
+        const pendingApp = createHttpApp({
+          authenticator: new WorkOSJwtAuthenticator({
+            audience: AUDIENCE,
+            testHmacSecret: HMAC,
+          }),
+          store: pendingStore,
+          useMockPostHog: false,
+          onLog: () => undefined,
+        });
+        const token = await mintJwt("wo-pending");
+        const res = await pendingApp.fetch(
+          new Request("https://example.com/mcp", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: "application/json, text/event-stream",
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              jsonrpc: "2.0",
+              id: 1,
+              method: "initialize",
+              params: {
+                protocolVersion: "2025-03-26",
+                capabilities: {},
+                clientInfo: { name: "oauth-harness", version: "1.0.0" },
+              },
+            }),
+          }),
+        );
+        assert(
+          res.status >= 200 && res.status < 300,
+          `expected MCP init success, got ${res.status} ${await res.clone().text()}`,
+        );
+        const user = await pendingStore.getUserByWorkosId("wo-pending");
+        assert(user, "user upserted");
+      },
+    ),
+  );
+
+  results.push(
     await runCase("www-authenticate helper", async () => {
       const h = oauthWwwAuthenticate("https://example.com/.well-known/x");
       assert(h.startsWith("Bearer "), "bearer");
