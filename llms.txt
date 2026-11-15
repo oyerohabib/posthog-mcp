@@ -13,6 +13,7 @@ posthog-mcp exposes ~25 Model Context Protocol tools so agents can read and writ
 - Insights: query_trends, query_funnel, query_retention, list_insights, get_insight
 - Cohorts/groups: list_cohorts, get_cohort, get_cohort_persons, list_group_types, list_groups, find_group
 - Project: get_project, list_dashboards
+- Setup (remote): get_setup_status
 
 ## Modes
 

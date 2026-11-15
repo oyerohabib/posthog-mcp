@@ -13,10 +13,11 @@ Agents need tools they can call, not dashboards they can screenshot. This repo s
 - An 80-task evaluation dataset
 - Agent evals via Gemini or Groq comparing tool-assisted vs no-tool performance
 
-## Tools (25)
+## Tools (26)
 
 | Category | Tools |
 |----------|--------|
+| Setup | `get_setup_status` (remote: PostHog connect link / ready check) |
 | Events & users | `capture_event`, `identify_user`, `get_person`, `list_persons`, `get_person_events` |
 | Flags & experiments | `get_feature_flag`, `list_feature_flags`, `get_feature_flag_definition`, `create_feature_flag`, `update_feature_flag`, `list_experiments`, `get_experiment` |
 | Insights | `query_trends`, `query_funnel`, `query_retention`, `list_insights`, `get_insight` |
@@ -149,7 +150,7 @@ After deploying OAuth (see [docs/oauth-onboarding.md](./docs/oauth-onboarding.md
 }
 ```
 
-Cursor performs MCP OAuth with WorkOS AuthKit. Then open the onboarding URL to connect PostHog and pick a project. Endpoints: `GET /health`, Streamable HTTP `/mcp`, CIMD `/oauth/posthog-client`.
+Cursor performs MCP OAuth with WorkOS AuthKit. Then call `get_setup_status` and open `connectUrl` to authorize PostHog and pick a project. Endpoints: `GET /health`, Streamable HTTP `/mcp`, CIMD `/oauth/posthog-client`.
 
 ## Scripts
 
