@@ -8,7 +8,9 @@ import { createServer } from "node:http";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHttpApp } from "./http/app.js";
+import { createConnectionStore } from "./http/db/postgres.js";
 import { nodeRequestToWeb, webResponseToNode } from "./http/node-adapter.js";
+import { authkitDomain } from "./http/oauth/prm.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 loadEnv({ path: resolve(here, "../.env") });
@@ -18,15 +20,23 @@ const PORT = Number(process.env.PORT ?? 8787);
 const HOST = process.env.HOST ?? "0.0.0.0";
 
 async function main() {
+  const hasApiKey = Boolean((process.env.MCP_API_KEY ?? "").trim());
+  const hasOauth = Boolean(authkitDomain() && process.env.MCP_RESOURCE_URL);
+  const hasTestHmac = Boolean(process.env.OAUTH_TEST_HMAC_SECRET);
   if (
     process.env.NODE_ENV === "production" &&
-    !(process.env.MCP_API_KEY ?? "").trim()
+    !hasApiKey &&
+    !hasOauth &&
+    !hasTestHmac
   ) {
-    console.error("[posthog-mcp-http] MCP_API_KEY is required in production");
+    console.error(
+      "[posthog-mcp-http] Configure WORKOS_AUTHKIT_DOMAIN + MCP_RESOURCE_URL and/or MCP_API_KEY",
+    );
     process.exit(1);
   }
 
-  const app = createHttpApp();
+  const store = await createConnectionStore();
+  const app = createHttpApp({ store });
   const server = createServer(async (req, res) => {
     try {
       const webReq = await nodeRequestToWeb(req);
@@ -57,7 +67,7 @@ async function main() {
 
   server.listen(PORT, HOST, () => {
     console.error(
-      `[posthog-mcp-http] listening on http://${HOST}:${PORT} (MCP POST /mcp, health GET /health)`,
+      `[posthog-mcp-http] listening on http://${HOST}:${PORT} (MCP /mcp, health /health, OAuth onboarding)`,
     );
   });
 }
